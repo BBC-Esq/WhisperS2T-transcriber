@@ -1,8 +1,5 @@
 from pathlib import Path
-import subprocess
-import glob
 import whisper_s2t
-import shutil
 
 def transcribe_audio_files(directory):
     model_kwargs = {
@@ -41,18 +38,19 @@ def transcribe_audio_files(directory):
     for pattern in patterns:
         audio_files.extend(directory_path.rglob(pattern))
 
-    for original_audio_file in audio_files:
-        print(f"Processing {original_audio_file}...")
+    # Convert audio file paths to strings and prepare VTT file paths
+    audio_files_str = [str(file) for file in audio_files]
+    vtt_file_paths = [str(file.with_suffix('.vtt')) for file in audio_files]
 
-        lang_codes = ['en']
-        tasks = ['transcribe']
-        initial_prompts = [None]
+    lang_codes = 'en'
+    tasks = 'transcribe'
+    initial_prompts = None
 
-        out = model.transcribe_with_vad([str(original_audio_file)], lang_codes=lang_codes, tasks=tasks, initial_prompts=initial_prompts, batch_size=70)
+    out = model.transcribe_with_vad(audio_files_str, lang_codes=lang_codes, tasks=tasks, initial_prompts=initial_prompts, batch_size=70)
+    whisper_s2t.write_outputs(out, format='vtt', op_files=vtt_file_paths)
 
-        vtt_file_path = original_audio_file.with_suffix('.vtt')
-        whisper_s2t.write_outputs(out, format='vtt', op_files=[str(vtt_file_path)])
+    for original_audio_file, vtt_file_path in zip(audio_files, vtt_file_paths):
         print(f"Transcribed {original_audio_file} to {vtt_file_path}")
 
-audio_files_directory = r"C:\PATH\Scripts\WhisperS2T-batch-process\test" # RAW STRING WAS NECESSARY ON WINDOWS AS WELL...
+audio_files_directory = r"C:\PATH\Scripts\WhisperS2T-batch-process\test"
 transcribe_audio_files(audio_files_directory)
