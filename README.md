@@ -1,11 +1,12 @@
-# WhisperS2T-transcriber
+# 🚀WhisperS2T-transcriber🚀
 * Uses the powerful WhisperS2T and Ctranslate2 libraries to batch transcribe multiple files
-* The fastest (while still maintaining quality) Whisper model transcriber available.
+* THE fastest (while still maintaining quality) Whisper model transcriber available.
 
 ## Requirements
 * Python 3.11
 * Nvidia GPU with CUDA 12+ software installed
   > For the initial releases I'm requiring this, but in the future I plan on support cpu-only inatallations and/or AMD gpu-acceleration as well.
+* Also, you might have to customize the instructions for Linux because I don't have Linux to test.
 
 ## Installation Instructions
 Download the latest release and extract the files your computer.<br><br>  Navigate to the respository folder and create a command prompt and run:
