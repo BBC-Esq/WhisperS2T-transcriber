@@ -40,3 +40,7 @@ pip3 install -U --no-deps git+https://github.com/shashikg/WhisperS2T.git
 ```
 python whispers2t_batch_gui.py
 ```
+## No GUI
+```
+python whispers2t_batch.py
+```
