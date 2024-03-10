@@ -30,24 +30,19 @@ python -m pip install --upgrade pip
 pip3 install -r requirements.txt
 ```
 ### Install Pytorch
+* If using Python 3.11:
 ```
 pip3 install https://download.pytorch.org/whl/cu121/torch-2.2.0%2Bcu121-cp311-cp311-win_amd64.whl#sha256=d79324159c622243429ec214a86b8613c1d7d46fc4821374d324800f1df6ade1
 ```
-  > If using Python 3.11
+* If using Pyton 3.10:
 ```
 pip3 install https://download.pytorch.org/whl/cu121/torch-2.2.0%2Bcu121-cp310-cp310-win_amd64.whl#sha256=8f54c647ee19c8b4c0aad158c73b83b2c06cb62351e9cfa981540ce7295a9015
 ```
-  > If using Pyton 3.10
 ### Install WhisperS2T
 ```
 pip3 install -U --no-deps git+https://github.com/shashikg/WhisperS2T.git
 ```
-
 ## Usage
 ```
 python whispers2t_batch_gui.py
-```
-## No GUI
-```
-python whispers2t_batch.py
 ```
