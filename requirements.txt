@@ -1,12 +1,8 @@
 PySide6==6.6.1
-ctranslate2==4.0.0
+ctranslate2
 openai-whisper==20231117
 rich==13.7.0
 platformdirs==4.2.0
 psutil==5.9.8
 nvidia-ml-py==12.535.133
 tokenizers==0.15.2
-
-# pip3 install -U --no-deps git+https://github.com/shashikg/WhisperS2T.git
-
-# pip3 install https://download.pytorch.org/whl/cu121/torch-2.2.0%2Bcu121-cp311-cp311-win_amd64.whl#sha256=d79324159c622243429ec214a86b8613c1d7d46fc4821374d324800f1df6ade1
