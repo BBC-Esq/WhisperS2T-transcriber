@@ -14,17 +14,13 @@
 # Installation
 Download the latest release and extract the files your computer.  Navigate to the respository folder, create a command prompt, and run the following commands:
 
-### Create a virtual environment
 ```
 python -m venv .
 ```
-### Activate virtual environment
 ```
 .\Scripts\activate
 ```
   > Run this again to activate the environment each time you restart the program.
-
-### Install
 ```
 python setup_windows.py
 ```
