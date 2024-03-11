@@ -3,10 +3,13 @@
 * THE fastest (while still maintaining quality) Whisper model transcriber available.
 
 ## Requirements
-* Python 3.11
-* Nvidia GPU with CUDA 12+ software installed
-  > For the initial releases I'm requiring this, but in the future I plan on support cpu-only inatallations and/or AMD gpu-acceleration as well.
-* Also, you might have to customize the instructions for Linux because I don't have Linux to test.
+1) 🐍[Python 3.10](https://www.python.org/downloads/release/python-31011/) or [Python 3.11](https://www.python.org/downloads/release/python-3117/)
+2) 📁[Git](https://git-scm.com/downloads)
+3) 📁[Git Large File Storage](https://git-lfs.com/).
+6) 🟢[CUDA 12.1+](https://developer.nvidia.com/cuda-toolkit) for Nvidia GPU acceleration.
+   > AMD acceleration not yet supported.
+8) 🪟 Windows
+   > You can modify the installation instructions manually for Linux, I just don't have Linux in order to test them reliably.  You can do this by analyzing the ```requirements.txt``` and ```setup_windows.py``` files to see what the libraries are required.
 
 ## Installation Instructions
 Download the latest release and extract the files your computer.<br><br>  Navigate to the respository folder and create a command prompt and run:
