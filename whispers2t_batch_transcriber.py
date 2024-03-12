@@ -11,7 +11,7 @@ class Worker(QThread):
     finished = Signal(str)
     progress = Signal(str)
 
-    def __init__(self, directory, recursive, output_format, device, size, quantization, beam_size, batch_size, task):
+    def __init__(self, directory, recursive, output_format, device, size, quantization, beam_size, batch_size, task, selected_extensions):
         super().__init__()
         self.directory = directory
         self.recursive = recursive
@@ -22,6 +22,7 @@ class Worker(QThread):
         self.beam_size = beam_size
         self.batch_size = batch_size
         self.task = task.lower()
+        self.selected_extensions = selected_extensions
         self.file_queue = Queue()
         self.enumeration_done = False
         self.stop_requested = Event()
@@ -50,7 +51,7 @@ class Worker(QThread):
 
     def run(self):
         directory_path = Path(self.directory)
-        patterns = ['*.mp3', '*.wav', '*.flac', '*.wma', '*.aac', '*.m4a', '*.avi', '*.mkv', '*.mp4', '*.asf', '*.amr']
+        patterns = [f'*{ext}' for ext in self.selected_extensions]
 
         self.enqueue_files(directory_path, patterns)
 
