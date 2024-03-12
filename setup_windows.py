@@ -58,8 +58,10 @@ def install_pytorch(cuda_version_num):
     if cuda_version_num >= 12.1:
         if minor == 11:
             os.system(f"{sys.executable} -m pip install https://download.pytorch.org/whl/cu121/torch-2.2.0%2Bcu121-cp311-cp311-win_amd64.whl#sha256=d79324159c622243429ec214a86b8613c1d7d46fc4821374d324800f1df6ade1")
+            os.system(f"{sys.executable} -m pip install nvidia-ml-py==12.535.133")
         elif minor == 10:
             os.system(f"{sys.executable} -m pip install https://download.pytorch.org/whl/cu121/torch-2.2.0%2Bcu121-cp310-cp310-win_amd64.whl#sha256=8f54c647ee19c8b4c0aad158c73b83b2c06cb62351e9cfa981540ce7295a9015")
+            os.system(f"{sys.executable} -m pip install nvidia-ml-py==12.535.133")
     else:
         if minor == 11:
             os.system(f"{sys.executable} -m pip install https://download.pytorch.org/whl/cpu/torch-2.2.0%2Bcpu-cp311-cp311-win_amd64.whl#sha256=58194066e594cd8aff27ddb746399d040900cc0e8a331d67ea98499777fa4d31")

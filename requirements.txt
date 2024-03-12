@@ -4,5 +4,4 @@ openai-whisper==20231117
 rich==13.7.0
 platformdirs==4.2.0
 psutil==5.9.8
-nvidia-ml-py==12.535.133
 tokenizers==0.15.2

@@ -2,10 +2,14 @@ import sys
 from pathlib import Path
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QCheckBox, QLabel, QGroupBox, QMessageBox
 from PySide6.QtCore import Qt
+import torch    
 from utilities import get_compute_and_platform_info
 from whispers2t_batch_transcriber import Worker
 from metrics_bar import MetricsBar
 from settings import SettingsGroupBox
+
+def is_nvidia_gpu_available():
+    return torch.cuda.is_available() and "nvidia" in torch.cuda.get_device_name(0).lower()
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -13,13 +17,14 @@ class MainWindow(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("chintellalaw.com - For Non-Commercial Use")
-        self.setGeometry(100, 100, 680, 400)
+        self.setWindowTitle("chintellalaw.com - for non-commercial use")
+        initial_height = 400 if is_nvidia_gpu_available() else 370
+        self.setGeometry(100, 100, 680, initial_height)
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
 
         main_layout = QVBoxLayout()
 
-        transcriberGroupBox = QGroupBox("Batch Transcriber (ctranslate2 edition)")
+        transcriberGroupBox = QGroupBox("Batch Transcriber (ctranslate2 edition - huggingface edition coming soon)")
         transcriberLayout = QVBoxLayout()
 
         self.dirLabel = QLabel("No directory selected")
