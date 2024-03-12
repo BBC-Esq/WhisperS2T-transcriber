@@ -1,5 +1,6 @@
 import sys
-from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QCheckBox, QLabel, QGroupBox
+from pathlib import Path
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QCheckBox, QLabel, QGroupBox, QMessageBox
 from PySide6.QtCore import Qt
 from utilities import get_compute_and_platform_info
 from whispers2t_batch_transcriber import Worker
@@ -53,7 +54,7 @@ class MainWindow(QWidget):
         self.selectDirButton.clicked.connect(self.selectDirectory)
         selectDirLayout.addWidget(self.selectDirButton)
 
-        self.recursiveCheckbox = QCheckBox("Process All Sub-Folders?")
+        self.recursiveCheckbox = QCheckBox("Process Sub-Folders?")
         selectDirLayout.addWidget(self.recursiveCheckbox)
 
         self.processButton = QPushButton("Process")
@@ -84,34 +85,59 @@ class MainWindow(QWidget):
             self.dirLabel.setText(f"Directory: {dirPath}")
             self.processButton.setEnabled(True)
 
+    def calculate_files_to_process(self):
+        selected_extensions = [checkbox.text() for checkbox in self.file_extension_checkboxes if checkbox.isChecked()]
+        patterns = [f'*{ext}' for ext in selected_extensions]
+
+        directory_path = Path(self.directory)
+        total_files = 0
+        for pattern in patterns:
+            if self.recursiveCheckbox.isChecked():
+                total_files += len(list(directory_path.rglob(pattern)))
+            else:
+                total_files += len(list(directory_path.glob(pattern)))
+        return total_files
+
     def processFiles(self):
         if hasattr(self, 'directory'):
-            device = self.settingsGroupBox.computeDeviceComboBox.currentText()
-            size = self.settingsGroupBox.sizeComboBox.currentText()
-            quantization = self.settingsGroupBox.quantizationComboBox.currentText()
-            beam_size = self.settingsGroupBox.beamSizeSlider.value()
-            batch_size = self.settingsGroupBox.batchSizeSlider.value()
-            output_format = self.settingsGroupBox.formatComboBox.currentText()
-            task = self.settingsGroupBox.transcribeTranslateComboBox.currentText()
+            total_files = self.calculate_files_to_process()
 
-            selected_extensions = [checkbox.text() for checkbox in self.file_extension_checkboxes if checkbox.isChecked()]
+            reply = QMessageBox.question(
+                self, 
+                'Confirm Process', 
+                f"{total_files} files found that match the selected criteria. Click OK to proceed or Cancel to abort.",
+                QMessageBox.Ok | QMessageBox.Cancel, 
+                QMessageBox.Ok)
 
-            self.worker = Worker(directory=self.directory, 
-                                 recursive=self.recursiveCheckbox.isChecked(), 
-                                 output_format=output_format, 
-                                 device=device, 
-                                 size=size, 
-                                 quantization=quantization, 
-                                 beam_size=beam_size, 
-                                 batch_size=batch_size,
-                                 task=task,
-                                 selected_extensions=selected_extensions)
-            
-            self.worker.progress.connect(self.updateProgress)
-            self.worker.finished.connect(self.workerFinished)
-            self.worker.start()
-            self.processButton.setEnabled(False)
-            self.stopButton.setEnabled(True)
+            if reply == QMessageBox.Ok:
+                device = self.settingsGroupBox.computeDeviceComboBox.currentText()
+                size = self.settingsGroupBox.sizeComboBox.currentText()
+                quantization = self.settingsGroupBox.quantizationComboBox.currentText()
+                beam_size = self.settingsGroupBox.beamSizeSlider.value()
+                batch_size = self.settingsGroupBox.batchSizeSlider.value()
+                output_format = self.settingsGroupBox.formatComboBox.currentText()
+                task = self.settingsGroupBox.transcribeTranslateComboBox.currentText()
+
+                selected_extensions = [checkbox.text() for checkbox in self.file_extension_checkboxes if checkbox.isChecked()]
+
+                self.worker = Worker(directory=self.directory, 
+                                     recursive=self.recursiveCheckbox.isChecked(), 
+                                     output_format=output_format, 
+                                     device=device, 
+                                     size=size, 
+                                     quantization=quantization, 
+                                     beam_size=beam_size, 
+                                     batch_size=batch_size,
+                                     task=task,
+                                     selected_extensions=selected_extensions)
+                
+                self.worker.progress.connect(self.updateProgress)
+                self.worker.finished.connect(self.workerFinished)
+                self.worker.start()
+                self.processButton.setEnabled(False)
+                self.stopButton.setEnabled(True)
+            else:
+                self.updateProgress("Processing cancelled by user.")
         else:
             self.updateProgress("Please select a directory first.")
 
