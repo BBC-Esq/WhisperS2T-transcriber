@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QCheckBox, QLabel, QGroupBox, QMessageBox
@@ -7,6 +8,23 @@ from utilities import get_compute_and_platform_info
 from whispers2t_batch_transcriber import Worker
 from metrics_bar import MetricsBar
 from settings import SettingsGroupBox
+import logging
+import traceback
+from constants import WHISPER_MODELS
+
+def set_cuda_paths():
+    try:
+        venv_base = Path(sys.executable).parent
+        nvidia_base_path = venv_base / 'Lib' / 'site-packages' / 'nvidia'
+        for env_var in ['CUDA_PATH', 'CUDA_PATH_V12_1', 'PATH']:
+            current_path = os.environ.get(env_var, '')
+            os.environ[env_var] = os.pathsep.join(filter(None, [str(nvidia_base_path), current_path]))
+        logging.info("CUDA paths set successfully")
+    except Exception as e:
+        logging.error(f"Error setting CUDA paths: {str(e)}")
+        logging.debug(traceback.format_exc())
+
+set_cuda_paths()
 
 def is_nvidia_gpu_available():
     return torch.cuda.is_available() and "nvidia" in torch.cuda.get_device_name(0).lower()
@@ -115,9 +133,8 @@ class MainWindow(QWidget):
                 QMessageBox.Ok)
 
             if reply == QMessageBox.Ok:
+                model_key = self.settingsGroupBox.modelComboBox.currentText()
                 device = self.settingsGroupBox.computeDeviceComboBox.currentText()
-                size = self.settingsGroupBox.sizeComboBox.currentText()
-                quantization = self.settingsGroupBox.quantizationComboBox.currentText()
                 beam_size = self.settingsGroupBox.beamSizeSlider.value()
                 batch_size = self.settingsGroupBox.batchSizeSlider.value()
                 output_format = self.settingsGroupBox.formatComboBox.currentText()
@@ -129,8 +146,7 @@ class MainWindow(QWidget):
                                      recursive=self.recursiveCheckbox.isChecked(), 
                                      output_format=output_format, 
                                      device=device, 
-                                     size=size, 
-                                     quantization=quantization, 
+                                     model_key=model_key,
                                      beam_size=beam_size, 
                                      batch_size=batch_size,
                                      task=task,

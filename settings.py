@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSlider)
 from PySide6.QtCore import Qt
-from utilities import get_supported_quantizations
+from constants import WHISPER_MODELS
 
 class SettingsGroupBox(QGroupBox):
     def __init__(self, get_compute_and_platform_info_callback, parent=None):
@@ -12,25 +12,21 @@ class SettingsGroupBox(QGroupBox):
         self.setLayout(QVBoxLayout())
 
         hbox1_layout = QHBoxLayout()
+        
+        # Replace size and quantization combo boxes with a single model combo box
+        modelLabel = QLabel("Model:")
+        hbox1_layout.addWidget(modelLabel)
+
+        self.modelComboBox = QComboBox()
+        self.modelComboBox.addItems(WHISPER_MODELS.keys())
+        hbox1_layout.addWidget(self.modelComboBox)
+
+        # Keep the rest of the widgets
         computeDeviceLabel = QLabel("Device:")
         hbox1_layout.addWidget(computeDeviceLabel)
 
         self.computeDeviceComboBox = QComboBox()
         hbox1_layout.addWidget(self.computeDeviceComboBox)
-
-        sizeLabel = QLabel("Size:")
-        hbox1_layout.addWidget(sizeLabel)
-
-        self.sizeComboBox = QComboBox()
-        model_sizes = ["large-v2", "medium.en", "medium", "small.en", "small", "base.en", "base", "tiny.en", "tiny"]
-        self.sizeComboBox.addItems(model_sizes)
-        hbox1_layout.addWidget(self.sizeComboBox)
-
-        quantizationLabel = QLabel("Quant:")
-        hbox1_layout.addWidget(quantizationLabel)
-
-        self.quantizationComboBox = QComboBox()
-        hbox1_layout.addWidget(self.quantizationComboBox)
 
         formatLabel = QLabel("Output:")
         hbox1_layout.addWidget(formatLabel)
@@ -85,7 +81,6 @@ class SettingsGroupBox(QGroupBox):
         self.layout().addLayout(batch_size_layout)
 
         self.populateComputeDeviceComboBox()
-        self.computeDeviceComboBox.currentIndexChanged.connect(self.updateQuantizationComboBox)
 
     def update_slider_label(self, slider, label):
         label.setText(str(slider.value()))
@@ -94,10 +89,3 @@ class SettingsGroupBox(QGroupBox):
         available_devices = self.get_compute_and_platform_info()
         self.computeDeviceComboBox.addItems(available_devices)
         self.computeDeviceComboBox.setCurrentIndex(self.computeDeviceComboBox.findText("cpu"))
-        self.updateQuantizationComboBox()
-
-    def updateQuantizationComboBox(self):
-        device_type = self.computeDeviceComboBox.currentText()
-        quantizations = get_supported_quantizations(device_type)
-        self.quantizationComboBox.clear()
-        self.quantizationComboBox.addItems(quantizations)

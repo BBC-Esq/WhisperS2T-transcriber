@@ -1,4 +1,5 @@
 import os
+import sys
 import gc
 from PySide6.QtCore import QThread, Signal, QElapsedTimer
 from pathlib import Path
@@ -6,19 +7,19 @@ import whisper_s2t
 from queue import Queue
 import torch
 from threading import Event
+from constants import WHISPER_MODELS
 
 class Worker(QThread):
     finished = Signal(str)
     progress = Signal(str)
 
-    def __init__(self, directory, recursive, output_format, device, size, quantization, beam_size, batch_size, task, selected_extensions):
+    def __init__(self, directory, recursive, output_format, device, model_key, beam_size, batch_size, task, selected_extensions):
         super().__init__()
         self.directory = directory
         self.recursive = recursive
         self.output_format = output_format
         self.device = device
-        self.size = size
-        self.quantization = quantization
+        self.model_info = WHISPER_MODELS[model_key]
         self.beam_size = beam_size
         self.batch_size = batch_size
         self.task = task.lower()
@@ -55,8 +56,19 @@ class Worker(QThread):
 
         self.enqueue_files(directory_path, patterns)
 
-        model_identifier = f"ctranslate2-4you/whisper-{self.size}-ct2-{self.quantization}"
-        model = whisper_s2t.load_model(model_identifier=model_identifier, backend='CTranslate2', device=self.device, compute_type=self.quantization, asr_options={'beam_size': self.beam_size}, cpu_threads=os.cpu_count())
+        model_kwargs = {}
+        if 'large-v3' in self.model_info['repo_id']:
+            model_kwargs['n_mels'] = 128
+
+        model = whisper_s2t.load_model(
+            model_identifier=self.model_info['repo_id'],
+            backend='CTranslate2',
+            device=self.device,
+            compute_type=self.model_info['precision'],
+            asr_options={'beam_size': self.beam_size},
+            cpu_threads=max(4, os.cpu_count() - 6) if self.device == "cpu" else 4,
+            **model_kwargs
+        )
 
         timer = QElapsedTimer()
         timer.start()
