@@ -1,7 +1,0 @@
-PySide6==6.6.1
-ctranslate2
-openai-whisper==20231117
-rich==13.7.0
-platformdirs==4.2.0
-psutil==5.9.8
-tokenizers==0.15.2
