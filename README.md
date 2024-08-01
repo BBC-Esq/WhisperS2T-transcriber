@@ -7,7 +7,7 @@
 2) 📁[Git](https://git-scm.com/downloads)
 3) 📁[Git Large File Storage](https://git-lfs.com/)
 8) 🪟 Windows (linux not yet supported)
-   > You can modify the installation instructions manually for Linux, I just don't have Linux in order to test them reliably.  You can do this by analyzing the ```setup.py``` file to see what libraries are required.
+   > You can modify the installation instructions manually for Linux, I just don't have Linux in order to test them reliably.  You can do this by analyzing the ```setup_gpu.py``` or ```setup_cpu_only.py``` file to see what libraries are required.
 
 # Installation
 Download the latest release and extract the files your computer.  Navigate to the respository folder, create a command prompt, and run the following commands:
@@ -19,8 +19,13 @@ python -m venv .
 .\Scripts\activate
 ```
   > Run this again to activate the environment each time you restart the program.
+
+Select GPU (includes CPU) or CPU-only installation:
 ```
-python setup.py
+python setup_gpu.py
+```
+```
+python setup_cpu_only.py
 ```
 # Usage
 ```
