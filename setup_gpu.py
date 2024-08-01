@@ -6,7 +6,6 @@ from pathlib import Path
 
 def install_libraries_with_retry(max_retries=3, delay=3):
     libraries = [
-        # "accelerate==0.33.0",
         "certifi==2024.7.4",
         "charset-normalizer==3.3.2",
         "colorama==0.4.6",
@@ -29,7 +28,6 @@ def install_libraries_with_retry(max_retries=3, delay=3):
         "nvidia-cuda-runtime-cu12==12.1.105",
         "nvidia-ml-py==12.555.43",
         "openai-whisper==20231117",
-        # "optimum==1.21.2",
         "packaging==24.1",
         "platformdirs==4.2.2",
         "psutil==6.0.0",
