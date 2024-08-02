@@ -1,5 +1,6 @@
 import torch
 import ctranslate2
+import psutil
 
 def get_compute_and_platform_info():
     available_devices = ["cpu"]
@@ -9,6 +10,7 @@ def get_compute_and_platform_info():
     
     return available_devices
 
+
 def get_supported_quantizations(device_type):
     types = ctranslate2.get_supported_compute_types(device_type)
     filtered_types = [q for q in types if q != 'int16']
@@ -16,3 +18,6 @@ def get_supported_quantizations(device_type):
     sorted_types = [q for q in desired_order if q in filtered_types]
     return sorted_types
 
+
+def get_physical_core_count():
+    return psutil.cpu_count(logical=False)

@@ -13,7 +13,6 @@ class SettingsGroupBox(QGroupBox):
 
         hbox1_layout = QHBoxLayout()
         
-        # Replace size and quantization combo boxes with a single model combo box
         modelLabel = QLabel("Model:")
         hbox1_layout.addWidget(modelLabel)
 
@@ -21,7 +20,6 @@ class SettingsGroupBox(QGroupBox):
         self.modelComboBox.addItems(WHISPER_MODELS.keys())
         hbox1_layout.addWidget(self.modelComboBox)
 
-        # Keep the rest of the widgets
         computeDeviceLabel = QLabel("Device:")
         hbox1_layout.addWidget(computeDeviceLabel)
 
@@ -50,13 +48,13 @@ class SettingsGroupBox(QGroupBox):
 
         self.beamSizeSlider = QSlider(Qt.Horizontal)
         self.beamSizeSlider.setMinimum(1)
-        self.beamSizeSlider.setMaximum(10)
-        self.beamSizeSlider.setValue(5)
+        self.beamSizeSlider.setMaximum(5)
+        self.beamSizeSlider.setValue(1)
         self.beamSizeSlider.setTickPosition(QSlider.TicksBelow)
         self.beamSizeSlider.setTickInterval(1)
         beam_size_layout.addWidget(self.beamSizeSlider)
 
-        self.beamSizeValueLabel = QLabel("5")
+        self.beamSizeValueLabel = QLabel("1")
         beam_size_layout.addWidget(self.beamSizeValueLabel)
         self.beamSizeSlider.valueChanged.connect(lambda: self.update_slider_label(self.beamSizeSlider, self.beamSizeValueLabel))
 

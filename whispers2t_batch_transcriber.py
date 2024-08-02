@@ -1,13 +1,18 @@
 import os
 import sys
 import gc
-from PySide6.QtCore import QThread, Signal, QElapsedTimer
 from pathlib import Path
-import whisper_s2t
-from queue import Queue
-import torch
 from threading import Event
+from queue import Queue
+
+from PySide6.QtCore import QThread, Signal, QElapsedTimer
+import whisper_s2t
+import torch
+
 from constants import WHISPER_MODELS
+from utilities import get_physical_core_count
+
+CPU_THREADS = max(4, get_physical_core_count() - 1)
 
 class Worker(QThread):
     finished = Signal(str)
@@ -66,7 +71,7 @@ class Worker(QThread):
             device=self.device,
             compute_type=self.model_info['precision'],
             asr_options={'beam_size': self.beam_size},
-            cpu_threads=max(4, os.cpu_count() - 6) if self.device == "cpu" else 4,
+            cpu_threads=CPU_THREADS if self.device == "cpu" else 4,
             **model_kwargs
         )
 
