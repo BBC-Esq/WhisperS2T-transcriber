@@ -10,9 +10,9 @@ import whisper_s2t
 import torch
 
 from constants import WHISPER_MODELS
-from utilities import get_physical_core_count
+from utilities import get_logical_core_count
 
-CPU_THREADS = max(4, get_physical_core_count() - 1)
+CPU_THREADS = max(4, get_logical_core_count() - 8)
 
 class Worker(QThread):
     finished = Signal(str)
