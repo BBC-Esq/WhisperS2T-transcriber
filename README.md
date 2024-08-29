@@ -1,6 +1,5 @@
 # 🚀WhisperS2T-transcriber🚀
 * Uses the powerful WhisperS2T and Ctranslate2 libraries to batch transcribe multiple files
-* THE fastest (while still maintaining quality) Whisper model transcriber available.
 
 ## Requirements
 1) 🐍[Python 3.11](https://www.python.org/downloads/release/python-3117/)
