@@ -32,3 +32,6 @@ python whispers2t_batch_gui.py
 ```
 The program will process any and all of the following file types:
 * ```.mp3```, ```.wav```, ```.flac```, ```.wma```, ```.aac```, ```.m4a```, ```.avi```, ```.mkv```, ```.mp4```, ```.asf```, ```.amr```.
+
+### Important
+All transcriptions are output in the same folder of the file that was transcribed.  If you'd like to change this behavior put an issue on Github requesting it.
