@@ -19,19 +19,16 @@ python -m venv .
 ```
   > Run this again to activate the environment each time you restart the program.
 
-Select GPU (includes CPU) or CPU-only installation:
+Run the installation script:
 ```
-python setup_gpu.py
-```
-```
-python setup_cpu_only.py
+python setup.py
 ```
 # Usage
 ```
 python whispers2t_batch_gui.py
 ```
 The program will process any and all of the following file types:
-* ```.mp3```, ```.wav```, ```.flac```, ```.wma```, ```.aac```, ```.m4a```, ```.avi```, ```.mkv```, ```.mp4```, ```.asf```, ```.amr```.
+* ```.aac```, ```.amr```, ```.asf```, ```.avi```, ```.flac```, ```.m4a```, ```.mkv```, ```.mp3```, ```.mp4```, ```.wav```, ```.webm```, ```.wma```.
 
 ### Important
 All transcriptions are output in the same folder of the file that was transcribed.  If you'd like to change this behavior put an issue on Github requesting it.
