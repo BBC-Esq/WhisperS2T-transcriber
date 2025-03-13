@@ -28,27 +28,25 @@ from whispers2t_batch_transcriber import Worker
 def set_cuda_paths():
     venv_base = Path(sys.executable).parent.parent
     nvidia_base_path = venv_base / 'Lib' / 'site-packages' / 'nvidia'
-    cuda_path = nvidia_base_path / 'cuda_runtime' / 'bin'
+    cuda_path_runtime = nvidia_base_path / 'cuda_runtime' / 'bin'
+    cuda_path_runtime_lib = nvidia_base_path / 'cuda_runtime' / 'lib' / 'x64'
+    cuda_path_runtime_include = nvidia_base_path / 'cuda_runtime' / 'include'
     cublas_path = nvidia_base_path / 'cublas' / 'bin'
     cudnn_path = nvidia_base_path / 'cudnn' / 'bin'
-    paths_to_add = [str(cuda_path), str(cublas_path), str(cudnn_path)]
-    env_vars = ['CUDA_PATH', 'CUDA_PATH_V12_1', 'PATH']
-    
-    # print(f"Virtual environment base: {venv_base}")
-    # print(f"NVIDIA base path: {nvidia_base_path}")
-    # print(f"CUDA path: {cuda_path}")
-    # print(f"cuBLAS path: {cublas_path}")
-    # print(f"cuDNN path: {cudnn_path}")
-    
-    for env_var in env_vars:
-        current_value = os.environ.get(env_var, '')
-        new_value = os.pathsep.join(paths_to_add + [current_value] if current_value else paths_to_add)
-        os.environ[env_var] = new_value
-        # print(f"\n{env_var} updated:")
-        # print(f"  Old value: {current_value}")
-        # print(f"  New value: {new_value}")
-    
-    # print("\nCUDA paths have been set or updated in the environment variables.")
+    nvrtc_path = nvidia_base_path / 'cuda_nvrtc' / 'bin'
+
+    paths_to_add = [
+        str(cuda_path_runtime),
+        str(cuda_path_runtime_lib),
+        str(cuda_path_runtime_include),
+        str(cublas_path),
+        str(cudnn_path),
+        str(nvrtc_path),
+    ]
+
+    current_value = os.environ.get('PATH', '')
+    new_value = os.pathsep.join(paths_to_add + [current_value] if current_value else paths_to_add)
+    os.environ['PATH'] = new_value
 
 set_cuda_paths()
 
@@ -81,7 +79,7 @@ class MainWindow(QWidget):
 
         self.file_extension_checkboxes = []
 
-        file_extensions = [".aac", ".amr", ".asf", ".avi", ".flac", ".m4a", ".mkv", ".mp3", ".mp4", ".wav", ".wma"]
+        file_extensions = [".aac", ".amr", ".asf", ".avi", ".flac", ".m4a", ".mkv", ".mp3", ".mp4", ".wav", ".webm", ".wma"]
         for extension in file_extensions:
             checkbox = QCheckBox(extension)
             checkbox.setChecked(True)
