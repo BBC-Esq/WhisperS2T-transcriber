@@ -20,7 +20,7 @@ python -m venv .
 
 Run the installation script:
 ```
-python setup.py
+python install.py
 ```
 # Usage
 ```
