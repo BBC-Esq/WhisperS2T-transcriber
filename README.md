@@ -24,7 +24,7 @@ python install.py
 ```
 # Usage
 ```
-python whispers2t_batch_gui.py
+python main.py
 ```
 The program will process any and all of the following file types:
 * ```.aac```, ```.amr```, ```.asf```, ```.avi```, ```.flac```, ```.m4a```, ```.mkv```, ```.mp3```, ```.mp4```, ```.wav```, ```.webm```, ```.wma```.
