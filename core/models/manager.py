@@ -54,7 +54,12 @@ class ModelManager(QObject):
         model_kwargs = {}
         if 'large-v3' in model_info['repo_id']:
             model_kwargs['n_mels'] = 128
-            
+
+        asr_options = {
+            'beam_size': config['beam_size'],
+            'word_timestamps': True,  # NEW
+        }
+
         return whisper_s2t.load_model(
             model_identifier=model_info['repo_id'],
             backend='CTranslate2',
