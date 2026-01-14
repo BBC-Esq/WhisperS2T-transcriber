@@ -76,7 +76,10 @@ class ModelManager(QObject):
             gc.collect()
             
     def cleanup(self) -> None:
-        """Clean up all resources."""
         self._model_mutex.lock()
-        self._release_current_model()
+        try:
+            self._release_current_model()
+        finally:
+            self._model_mutex.unlock()
+
         self._model_mutex.unlock()
