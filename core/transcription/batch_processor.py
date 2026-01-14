@@ -1,7 +1,6 @@
 """Batch processing worker thread."""
 from pathlib import Path
 from typing import List, Dict, Any
-from queue import Queue
 from threading import Event
 
 from PySide6.QtCore import QThread, Signal, QElapsedTimer
@@ -84,4 +83,5 @@ class BatchProcessor(QThread):
             
         finally:
             elapsed = timer.elapsed() / 1000.0
+
             self.finished.emit(f"Processing time: {elapsed:.2f} seconds")
