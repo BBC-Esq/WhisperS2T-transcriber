@@ -2,7 +2,7 @@
 * Uses the powerful WhisperS2T and Ctranslate2 libraries to batch transcribe multiple files
 
 ## Requirements
-1) 🐍Python 3.11 or Python 3.12
+1) 🐍Python 3.11, 3.12 or 3.13
 2) 📁[Git](https://git-scm.com/downloads)
 3) 📁[Git Large File Storage](https://git-lfs.com/)
 8) 🪟 Windows (linux not yet supported)
