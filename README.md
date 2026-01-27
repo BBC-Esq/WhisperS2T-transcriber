@@ -1,4 +1,4 @@
-<img width="757" height="490" alt="app_icon" src="https://github.com/user-attachments/assets/27c4f4c4-e947-4923-889c-63b246170c07" /><br>
+<img width="400" height="245" alt="app_icon" src="https://github.com/user-attachments/assets/27c4f4c4-e947-4923-889c-63b246170c07" /><br>
 > Uses the powerful WhisperS2T and Ctranslate2 libraries to batch transcribe multiple files
 
 ## Requirements
