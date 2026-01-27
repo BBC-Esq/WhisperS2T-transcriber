@@ -1,5 +1,7 @@
-<img width="400" height="245" alt="app_icon" src="https://github.com/user-attachments/assets/27c4f4c4-e947-4923-889c-63b246170c07" /><br>
-> Uses the powerful WhisperS2T and Ctranslate2 libraries to batch transcribe multiple files
+<div align="center">
+  <img width="300" height="175" alt="app_icon" src="https://github.com/user-attachments/assets/27c4f4c4-e947-4923-889c-63b246170c07" /><br>
+Uses the powerful WhisperS2T and Ctranslate2 libraries to batch transcribe multiple files
+</div>
 
 ## Requirements
 1) 🐍Python 3.11, 3.12 or 3.13
