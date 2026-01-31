@@ -1,6 +1,7 @@
 <div align="center">
-  <img width="300" height="175" alt="app_icon" src="https://github.com/user-attachments/assets/27c4f4c4-e947-4923-889c-63b246170c07" /><br>
-Uses the powerful WhisperS2T and Ctranslate2 libraries to batch transcribe multiple files
+
+<img width="768" height="182" alt="splash" src="https://github.com/user-attachments/assets/23a1367c-6edc-4c2e-9ae3-7089dcfd4b04" />
+
 </div>
 
 ## Requirements
