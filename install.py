@@ -28,51 +28,6 @@ gpu_libs = [
     "nvidia-ml-py",
 ]
 
-# libs = [
-    # # "anyio",
-    # "certifi",
-    # # "cffi", #
-    # # "charset-normalizer", #
-    # # "click",
-    # "colorama",
-    # "ctranslate2==4.6.2",
-    # "filelock",
-    # "fsspec[http]",
-    # # "h11",
-    # # "hf_xet",
-    # # "httpcore",
-    # # "httpx",
-    # # "huggingface-hub",
-    # "idna",
-    # "Jinja2",
-    # # "markdown_it",
-    # "MarkupSafe",
-    # # "mdurl",
-    # # "mpmath",
-    # "networkx",
-    # "numpy",
-    # # "packaging",
-    # # "pkg_resources",
-    # "platformdirs",
-    # "psutil",
-    # "pycparser",
-    # "Pygments",
-    # "pyside6",
-    # "PyYAML",
-    # "pyreadline3",
-    # "requests",
-    # # "rich",
-    # "safetensors",
-    # # "setuptools",
-    # # "shellingham",
-    # "sympy==1.13.3",
-    # "tokenizers",
-    # "tqdm",
-    # # "typer",
-    # "typing_extensions",
-    # "urllib3",
-    # "whisper-s2t-reborn==1.4.2",
-# ]
 
 libs = [
     "ctranslate2==4.6.2",
@@ -80,7 +35,7 @@ libs = [
     "pyside6", # required by my program
     "requests",
     "sympy==1.13.3", # set to known torch compatibility
-    "whisper-s2t-reborn==1.4.3",
+    "whisper-s2t-reborn==1.4.4",
 ]
 
 
