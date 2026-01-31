@@ -10,7 +10,7 @@ Requires 🐍 [Python 3.11](https://www.python.org/downloads/release/python-3119
 </div>
 
 ## ⚙️ Windows Installer
-> Download and run [```FasterWhisperTranscriber_Setup.exe```](https://github.com/BBC-Esq/WhisperS2T-transcriber/releases/latest/download/Whisper_S2T_Transcriber_Setup.exe).
+> Download and run [```Whisper_S2T_Transcriber_Setup.exe```](https://github.com/BBC-Esq/WhisperS2T-transcriber/releases/latest/download/Whisper_S2T_Transcriber_Setup.exe).
 
 ## 💻 Install from Sourcecode
 > Download the latest release...unzip and extract...go to the directory containing ```main.py```...run these commands in order:
