@@ -1,110 +1,78 @@
 import sys
 import subprocess
 import time
-import os
 import tkinter as tk
 from tkinter import messagebox
 
 full_install_libs = [
-    "PySide6==6.9.2"
+    "PySide6==6.10.1"
 ]
 
 priority_libs = {
     "cp311": {
         "GPU": [
-            "https://download.pytorch.org/whl/cu128/torch-2.9.0%2Bcu128-cp311-cp311-win_amd64.whl#sha256=dc6f6c6e7d7eed20c687fc189754a6ea6bf2da9c64eff59fd6753b80ed4bca05",
+            "whisper-s2t-reborn==1.4.1",
             "nvidia-cuda-runtime-cu12==12.8.90",
             "nvidia-cublas-cu12==12.8.4.1",
-            "nvidia-cuda-nvrtc-cu12==12.8.93",
-            "nvidia-cuda-nvcc-cu12==12.8.93",
             "nvidia-cudnn-cu12==9.10.2.21",
             "nvidia-ml-py==13.580.82",
+            "https://download.pytorch.org/whl/cu128/torch-2.9.1%2Bcu128-cp311-cp311-win_amd64.whl"
         ],
-        "CPU": [
-            "https://download.pytorch.org/whl/cpu/torch-2.9.0%2Bcpu-cp311-cp311-win_amd64.whl#sha256=389e1e0b8083fd355f7caf5ba82356b5e01c318998bd575dbf2285a0d8137089"
-        ]
+        "CPU": []
     },
     "cp312": {
         "GPU": [
-            "https://download.pytorch.org/whl/cu128/torch-2.9.0%2Bcu128-cp312-cp312-win_amd64.whl#sha256=c97dc47a1f64745d439dd9471a96d216b728d528011029b4f9ae780e985529e0",
+            "whisper-s2t-reborn==1.4.1",
             "nvidia-cuda-runtime-cu12==12.8.90",
             "nvidia-cublas-cu12==12.8.4.1",
-            "nvidia-cuda-nvrtc-cu12==12.8.93",
-            "nvidia-cuda-nvcc-cu12==12.8.93",
             "nvidia-cudnn-cu12==9.10.2.21",
             "nvidia-ml-py==13.580.82",
+            "https://download.pytorch.org/whl/cu128/torch-2.9.1%2Bcu128-cp312-cp312-win_amd64.whl"
         ],
-        "CPU": [
-            "https://download.pytorch.org/whl/cpu/torch-2.9.0%2Bcpu-cp312-cp312-win_amd64.whl#sha256=e438061b87ec7dd6018fca9f975219889aa0a3f6cdc3ea10dd0ae2bc7f1c47ce"
-        ]
+        "CPU": []
     },
     "cp313": {
         "GPU": [
-            "https://download.pytorch.org/whl/cu128/torch-2.9.0%2Bcu128-cp313-cp313-win_amd64.whl#sha256=9cba9f0fa2e1b70fffdcec1235a1bb727cbff7e7b118ba111b2b7f984b7087e2",
+            "whisper-s2t-reborn==1.4.1",
             "nvidia-cuda-runtime-cu12==12.8.90",
             "nvidia-cublas-cu12==12.8.4.1",
-            "nvidia-cuda-nvrtc-cu12==12.8.93",
-            "nvidia-cuda-nvcc-cu12==12.8.93",
             "nvidia-cudnn-cu12==9.10.2.21",
             "nvidia-ml-py==13.580.82",
+            "https://download.pytorch.org/whl/cu128/torch-2.9.1%2Bcu128-cp313-cp313-win_amd64.whl"
         ],
-        "CPU": [
-            "https://download.pytorch.org/whl/cpu/torch-2.9.0%2Bcpu-cp313-cp313-win_amd64.whl#sha256=728372e3f58c5826445f677746e5311c1935c1a7c59599f73a49ded850e038e8"
-        ]
+        "CPU": []
     }
 }
 
 libs = [
-    "av==16.0.1",
-    "certifi==2025.10.5",
+    "certifi==2026.1.4",
     "cffi==2.0.0",
     "charset-normalizer==3.4.4",
     "colorama==0.4.6",
-    "coloredlogs==15.0.1",
     "ctranslate2==4.6.2",
-    # "faster-whisper==1.2.1",
-    "filelock==3.20.0",
-    "flatbuffers==25.2.10",
-    "fsspec[http]==2025.9.0",
+    "filelock==3.20.3",
+    "fsspec[http]==2026.1.0",
     "huggingface-hub==0.36.0",
-    "humanfriendly==10.0",
     "idna==3.11",
-    "mpmath==1.3.0",
-    "nltk==3.9.1",
-    "numpy==2.3.4",
-    "onnxruntime==1.20.1",
-    "packaging==25.0",
-    "protobuf==6.33.0",
-    "psutil==7.1.3",
+    "numpy==2.4.1",
+    "packaging==26.0",
+    "platformdirs==4.5.1",
+    "psutil==7.2.1",
     "pycparser==2.23",
     "pyreadline3==3.5.4",
     "PyYAML==6.0.3",
-    "regex==2025.10.23",
     "requests==2.32.5",
-    "sounddevice==0.5.3",
     "sympy==1.13.3",
-    "tokenizers==0.22.1",
+    "tokenizers==0.22.2",
     "tqdm==4.67.1",
     "typing_extensions==4.15.0",
-    "urllib3==2.5.0",
+    "urllib3==2.6.3",
     "Jinja2==3.1.6",
-    "llvmlite==0.44.0",
-    "markdown-it-py==4.0.0",
     "MarkupSafe==3.0.2",
-    "mdurl==0.1.2",
-    "more-itertools==10.8.0",
     "networkx==3.6.1",
-    "numba==0.61.2",
-    "openai-whisper==20250625",
-    "platformdirs==4.5.1",
     "Pygments==2.19.2",
     "rich==14.2.0",
     "safetensors==0.7.0",
-    "tiktoken==0.12.0",
-]
-
-git_libs = [
-    'git+https://github.com/shashikg/WhisperS2T.git@e7f7e6dbfdc7f3a39454feb9dd262fd3653add8c'
 ]
 
 start_time = time.time()
@@ -208,15 +176,12 @@ def main():
     if not tkinter_message_box("Hardware Detection", message, yes_no=True):
         sys.exit(1)
 
-    # 1. Install uv
     print("\033[92mInstalling uv:\033[0m")
     subprocess.run(["pip", "install", "uv"], check=True)
 
-    # 2. Upgrade core packages
     print("\033[92mUpgrading pip, setuptools, and wheel:\033[0m")
     upgrade_pip_setuptools_wheel()
 
-    # 3. Install priority libraries based on hardware
     print("\033[92mInstalling priority libraries:\033[0m")
     try:
         current_priority_libs = priority_libs[python_version][hardware_type]
@@ -225,22 +190,14 @@ def main():
         tkinter_message_box("Version Error", f"No libraries configured for Python {python_version} with {hardware_type} configuration", type="error")
         sys.exit(1)
 
-    # 4. Install regular libraries
     print("\033[92mInstalling other libraries:\033[0m")
     other_failed, other_multiple = install_libraries_with_retry(libs)
 
-    # 5. Install git libraries (WhisperS2T)
-    print("\033[92mInstalling git-based libraries:\033[0m")
-    git_failed, git_multiple = install_libraries_with_retry(git_libs)
-
-    # 6. Install full installation libraries with dependencies and link-mode
     print("\033[92mInstalling libraries with dependencies:\033[0m")
-    # PySide6 needs special link-mode=copy option
     full_failed, full_multiple = install_libraries_with_retry(full_install_libs, with_deps=True, link_mode="copy")
 
-    # 7. Installation summary
-    all_failed = priority_failed + other_failed + git_failed + full_failed
-    all_multiple = priority_multiple + other_multiple + git_multiple + full_multiple
+    all_failed = priority_failed + other_failed + full_failed
+    all_multiple = priority_multiple + other_multiple + full_multiple
 
     print("\n----- Installation Summary -----")
     if all_failed:
@@ -258,7 +215,7 @@ def main():
     elif not all_failed:
         print("\033[92mAll libraries were eventually installed successfully.\033[0m")
         print("\033[92m\nInstallation was successful! The program is ready to use.\033[0m")
-        print("To run it, enter the command: python whispers2t_batch_gui.py")
+        print("To run it, enter the command: python main.py")
     else:
         print("\033[91m\nInstallation encountered some issues. Please review the installation summary above.\033[0m")
 
