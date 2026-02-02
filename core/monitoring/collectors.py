@@ -1,22 +1,21 @@
-"""Metrics collection threads."""
+from threading import Event
 from PySide6.QtCore import QThread, Signal
 
-from core.monitoring.system_metrics import SystemMetrics, SystemMonitor
+from core.monitoring.system_metrics import SystemMonitor
+
 
 class MetricsCollector(QThread):
-    """Background thread for collecting system metrics."""
-    
-    metrics_updated = Signal(object)  # SystemMetrics
-    
-    def __init__(self, interval: int = 200):
+
+    metrics_updated = Signal(object)
+
+    def __init__(self, interval: int = 400):
         super().__init__()
         self.interval = interval
-        self.running = True
+        self._stop_event = Event()
         self.monitor = SystemMonitor()
 
     def run(self):
-        """Collect metrics at regular intervals."""
-        while self.running:
+        while not self._stop_event.is_set():
             try:
                 metrics = self.monitor.collect_all_metrics()
                 self.metrics_updated.emit(metrics)
@@ -26,5 +25,7 @@ class MetricsCollector(QThread):
             self.msleep(self.interval)
 
     def stop(self):
-        """Stop metrics collection."""
-        self.running = False
+        self._stop_event.set()
+
+    def cleanup(self):
+        self.monitor.shutdown()
