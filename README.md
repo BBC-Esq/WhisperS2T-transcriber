@@ -6,7 +6,7 @@
 ### Requires 🐍 [Python 3.11](https://www.python.org/downloads/release/python-3119/), [3.12](https://www.python.org/downloads/release/python-31210/) or [3.13](https://www.python.org/downloads/release/python-31311/), 📁 [Git](https://git-scm.com/downloads), 📁 [Git Large File Storage](https://git-lfs.com/), and 🎵 [FFmpeg](https://github.com/BtbN/FFmpeg-Builds/releases/tag/latest)
 **(Make sure FFMPEG is added to your system path)**
 
-<img width="698" height="448" alt="image" src="https://github.com/user-attachments/assets/53d742a7-a61f-441e-b4b4-b36b73d8356f" />
+<img width="698" height="454" alt="image" src="https://github.com/user-attachments/assets/cb62d1cf-9837-4a32-a1b3-479544699b36" />
 
 </div>
 
