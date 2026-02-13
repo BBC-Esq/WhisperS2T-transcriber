@@ -3,7 +3,6 @@ import subprocess
 import time
 import tkinter as tk
 from tkinter import messagebox
-import os
 
 
 torch_urls = {
@@ -28,13 +27,12 @@ gpu_libs = [
     "nvidia-ml-py",
 ]
 
-
 libs = [
     "ctranslate2==4.6.2",
-    "psutil", # required by my program
-    "pyside6", # required by my program
+    "psutil",
+    "pyside6",
     "requests",
-    "sympy==1.13.3", # set to known torch compatibility
+    "sympy==1.13.3",
     "whisper-s2t-reborn==1.4.4",
 ]
 
@@ -88,18 +86,12 @@ def check_python_version_and_confirm():
         return False
 
 def upgrade_pip_setuptools_wheel(max_retries=5, delay=3):
-    upgrade_commands = [
-        [sys.executable, "-m", "pip", "install", "--upgrade", "pip", "--no-cache-dir"],
-        [sys.executable, "-m", "pip", "install", "--upgrade", "setuptools", "--no-cache-dir"],
-        [sys.executable, "-m", "pip", "install", "--upgrade", "wheel", "--no-cache-dir"]
-    ]
-
-    for command in upgrade_commands:
-        package = command[5]
+    for package in ["pip", "setuptools", "wheel"]:
+        command = [sys.executable, "-m", "pip", "install", "--upgrade", package, "--no-cache-dir"]
         for attempt in range(max_retries):
             try:
                 print(f"\nAttempt {attempt + 1} of {max_retries}: Upgrading {package}...")
-                process = subprocess.run(command, check=True, capture_output=True, text=True, timeout=480)
+                subprocess.run(command, check=True, capture_output=True, text=True, timeout=480)
                 print(f"\033[92mSuccessfully upgraded {package}\033[0m")
                 break
             except subprocess.CalledProcessError as e:

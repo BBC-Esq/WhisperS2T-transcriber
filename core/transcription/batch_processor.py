@@ -1,4 +1,3 @@
-"""Batch processing worker thread."""
 from pathlib import Path
 from typing import List, Dict, Any
 from threading import Event
@@ -9,7 +8,7 @@ import whisper_s2t
 from config.settings import TranscriptionSettings
 
 class BatchProcessor(QThread):
-    progress = Signal(int, int, str)  # current, total, message
+    progress = Signal(int, int, str)
     finished = Signal(str)
     error = Signal(str)
 
@@ -52,7 +51,7 @@ class BatchProcessor(QThread):
                 try:
                     out = model.transcribe_with_vad(
                         [str(audio_file)],
-                        lang_codes=['en'],
+                        lang_codes=[self.settings.language],
                         tasks=[self.settings.task_mode],
                         initial_prompts=[None],
                         batch_size=self.settings.batch_size

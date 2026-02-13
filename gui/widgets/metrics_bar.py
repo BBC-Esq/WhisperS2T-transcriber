@@ -19,7 +19,7 @@ class MetricsBar(QWidget):
         self._has_nvidia_gpu = monitor.is_nvidia_gpu_available()
         monitor.shutdown()
 
-        self.metrics_store = MetricsStore(buffer_size=100)
+        self.metrics_store = MetricsStore()
         self.current_visualization_type = 1
 
         self._init_ui()

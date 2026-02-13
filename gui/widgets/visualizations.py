@@ -14,6 +14,15 @@ from PySide6.QtGui import (
 from core.monitoring.metrics_store import MetricsStore
 from core.monitoring.system_metrics import SystemMetrics
 
+# Shared metric definitions: (key, label, bar_label, color, accessor, gpu_only)
+METRIC_DEFS = [
+    ("cpu",   "CPU",       "CPU Usage:",  "#FF4136", lambda m: m.cpu_usage,           False),
+    ("ram",   "RAM",       "RAM Usage:",  "#B10DC9", lambda m: m.ram_usage_percent,   False),
+    ("gpu",   "GPU",       "GPU Usage:",  "#0074D9", lambda m: m.gpu_utilization,     True),
+    ("vram",  "VRAM",      "VRAM Usage:", "#2ECC40", lambda m: m.vram_usage_percent,  True),
+    ("power", "GPU Power", "GPU Power:",  "#FFD700", lambda m: m.power_usage_percent, True),
+]
+
 
 class BaseVisualization(QWidget):
 
@@ -22,6 +31,9 @@ class BaseVisualization(QWidget):
         self.metrics_store = metrics_store
         self.has_nvidia_gpu = has_nvidia_gpu
         self.metrics_store.metrics_ready.connect(self.update_metrics)
+
+    def _active_metrics(self):
+        return [m for m in METRIC_DEFS if not m[5] or self.has_nvidia_gpu]
 
     def update_metrics(self, metrics: SystemMetrics):
         raise NotImplementedError
@@ -34,6 +46,8 @@ class BarVisualization(BaseVisualization):
 
     def __init__(self, metrics_store: MetricsStore, has_nvidia_gpu: bool):
         super().__init__(metrics_store, has_nvidia_gpu)
+        self._bars = {}
+        self._labels = {}
         self._init_ui()
 
     def _init_ui(self):
@@ -41,60 +55,32 @@ class BarVisualization(BaseVisualization):
         grid_layout.setSpacing(0)
         grid_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.cpu_bar, self.cpu_label = self._add_metric_row(
-            "CPU Usage:", "#FF4136", grid_layout, 0
-        )
-        self.ram_bar, self.ram_label = self._add_metric_row(
-            "RAM Usage:", "#B10DC9", grid_layout, 1
-        )
+        for row, (key, _, bar_label, color, _, _) in enumerate(self._active_metrics()):
+            label = QLabel(bar_label)
+            grid_layout.addWidget(label, row, 0)
 
-        if self.has_nvidia_gpu:
-            self.gpu_bar, self.gpu_label = self._add_metric_row(
-                "GPU Usage:", "#0074D9", grid_layout, 2
+            percent_label = QLabel("0%")
+            grid_layout.addWidget(percent_label, row, 1)
+
+            bar = QProgressBar()
+            bar.setMaximum(100)
+            bar.setMaximumHeight(11)
+            bar.setStyleSheet(
+                f"QProgressBar {{ background-color: #1e2126; border: none; }}"
+                f"QProgressBar::chunk {{ background-color: {color}; }}"
             )
-            self.vram_bar, self.vram_label = self._add_metric_row(
-                "VRAM Usage:", "#2ECC40", grid_layout, 3
-            )
-            self.power_bar, self.power_label = self._add_metric_row(
-                "GPU Power:", "#FFD700", grid_layout, 4
-            )
+            bar.setTextVisible(False)
+            grid_layout.addWidget(bar, row, 2)
 
-    def _add_metric_row(self, label_text: str, color: str,
-                        layout: QGridLayout, row: int):
-        label = QLabel(label_text)
-        layout.addWidget(label, row, 0)
-
-        percent_label = QLabel("0%")
-        layout.addWidget(percent_label, row, 1)
-
-        bar = QProgressBar()
-        bar.setMaximum(100)
-        bar.setMaximumHeight(11)
-        bar.setStyleSheet(
-            f"QProgressBar {{ background-color: #1e2126; border: none; }}"
-            f"QProgressBar::chunk {{ background-color: {color}; }}"
-        )
-        bar.setTextVisible(False)
-        layout.addWidget(bar, row, 2)
-
-        return bar, percent_label
+            self._bars[key] = bar
+            self._labels[key] = percent_label
 
     def update_metrics(self, metrics: SystemMetrics):
-        self.cpu_bar.setValue(int(metrics.cpu_usage))
-        self.cpu_label.setText(f"{int(metrics.cpu_usage)}%")
-
-        self.ram_bar.setValue(int(metrics.ram_usage_percent))
-        self.ram_label.setText(f"{int(metrics.ram_usage_percent)}%")
-
-        if self.has_nvidia_gpu and metrics.gpu_utilization is not None:
-            self.gpu_bar.setValue(int(metrics.gpu_utilization))
-            self.gpu_label.setText(f"{int(metrics.gpu_utilization)}%")
-
-            self.vram_bar.setValue(int(metrics.vram_usage_percent))
-            self.vram_label.setText(f"{int(metrics.vram_usage_percent)}%")
-
-            self.power_bar.setValue(int(metrics.power_usage_percent))
-            self.power_label.setText(f"{int(metrics.power_usage_percent)}%")
+        for key, _, _, _, accessor, _ in self._active_metrics():
+            value = accessor(metrics)
+            if value is not None:
+                self._bars[key].setValue(int(value))
+                self._labels[key].setText(f"{int(value)}%")
 
 
 class Sparkline(QWidget):
@@ -174,6 +160,8 @@ class SparklineVisualization(BaseVisualization):
 
     def __init__(self, metrics_store: MetricsStore, has_nvidia_gpu: bool):
         super().__init__(metrics_store, has_nvidia_gpu)
+        self._sparklines = {}
+        self._labels = {}
         self._init_ui()
 
     def _init_ui(self):
@@ -181,66 +169,33 @@ class SparklineVisualization(BaseVisualization):
         layout.setSpacing(1)
         layout.setContentsMargins(1, 1, 1, 1)
 
-        cpu_widget, self.cpu_sparkline, self.cpu_label = self._create_sparkline_group(
-            "CPU", "#FF4136"
-        )
-        layout.addWidget(cpu_widget, 0, 0)
+        for col, (key, label_text, _, color, _, _) in enumerate(self._active_metrics()):
+            widget = QWidget()
+            vlayout = QVBoxLayout(widget)
+            vlayout.setSpacing(1)
+            vlayout.setContentsMargins(0, 0, 0, 0)
 
-        ram_widget, self.ram_sparkline, self.ram_label = self._create_sparkline_group(
-            "RAM", "#B10DC9"
-        )
-        layout.addWidget(ram_widget, 0, 1)
+            sparkline = Sparkline(color=color)
+            vlayout.addWidget(sparkline, alignment=Qt.AlignCenter)
 
-        if self.has_nvidia_gpu:
-            gpu_widget, self.gpu_sparkline, self.gpu_label = self._create_sparkline_group(
-                "GPU", "#0074D9"
-            )
-            layout.addWidget(gpu_widget, 0, 2)
+            label = QLabel(f"{label_text} 0.0%")
+            label.setAlignment(Qt.AlignCenter)
+            vlayout.addWidget(label, alignment=Qt.AlignCenter)
 
-            vram_widget, self.vram_sparkline, self.vram_label = self._create_sparkline_group(
-                "VRAM", "#2ECC40"
-            )
-            layout.addWidget(vram_widget, 0, 3)
-
-            power_widget, self.power_sparkline, self.power_label = self._create_sparkline_group(
-                "GPU Power", "#FFD700"
-            )
-            layout.addWidget(power_widget, 0, 4)
+            layout.addWidget(widget, 0, col)
+            self._sparklines[key] = sparkline
+            self._labels[key] = (label_text, label)
 
         for i in range(layout.columnCount()):
             layout.setColumnStretch(i, 1)
 
-    def _create_sparkline_group(self, name: str, color: str):
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setSpacing(1)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        sparkline = Sparkline(color=color)
-        layout.addWidget(sparkline, alignment=Qt.AlignCenter)
-
-        label = QLabel(f"{name} 0.0%")
-        label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(label, alignment=Qt.AlignCenter)
-
-        return widget, sparkline, label
-
     def update_metrics(self, metrics: SystemMetrics):
-        self.cpu_sparkline.add_value(metrics.cpu_usage)
-        self.cpu_label.setText(f"CPU {metrics.cpu_usage:.1f}%")
-
-        self.ram_sparkline.add_value(metrics.ram_usage_percent)
-        self.ram_label.setText(f"RAM {metrics.ram_usage_percent:.1f}%")
-
-        if self.has_nvidia_gpu and metrics.gpu_utilization is not None:
-            self.gpu_sparkline.add_value(metrics.gpu_utilization)
-            self.gpu_label.setText(f"GPU {metrics.gpu_utilization:.1f}%")
-
-            self.vram_sparkline.add_value(metrics.vram_usage_percent)
-            self.vram_label.setText(f"VRAM {metrics.vram_usage_percent:.1f}%")
-
-            self.power_sparkline.add_value(metrics.power_usage_percent)
-            self.power_label.setText(f"GPU Power {metrics.power_usage_percent:.1f}%")
+        for key, _, _, _, accessor, _ in self._active_metrics():
+            value = accessor(metrics)
+            if value is not None:
+                self._sparklines[key].add_value(value)
+                label_text, label = self._labels[key]
+                label.setText(f"{label_text} {value:.1f}%")
 
 
 class Speedometer(QWidget):
@@ -356,6 +311,8 @@ class SpeedometerVisualization(BaseVisualization):
 
     def __init__(self, metrics_store: MetricsStore, has_nvidia_gpu: bool):
         super().__init__(metrics_store, has_nvidia_gpu)
+        self._meters = {}
+        self._labels = {}
         self._init_ui()
 
     def _init_ui(self):
@@ -363,55 +320,32 @@ class SpeedometerVisualization(BaseVisualization):
         layout.setSpacing(1)
         layout.setContentsMargins(1, 1, 1, 1)
 
-        cpu_layout, self.cpu_meter, self.cpu_label = self._create_speedometer_group("CPU")
-        layout.addLayout(cpu_layout, 0, 0)
+        for col, (key, label_text, _, _, _, _) in enumerate(self._active_metrics()):
+            vlayout = QVBoxLayout()
+            vlayout.setSpacing(2)
 
-        ram_layout, self.ram_meter, self.ram_label = self._create_speedometer_group("RAM")
-        layout.addLayout(ram_layout, 0, 1)
+            speedometer = Speedometer(colors=["#00FF00", "#FFFF00", "#FF0000"])
+            speedometer.setFixedSize(105, 105)
+            vlayout.addWidget(speedometer, alignment=Qt.AlignCenter)
 
-        if self.has_nvidia_gpu:
-            gpu_layout, self.gpu_meter, self.gpu_label = self._create_speedometer_group("GPU")
-            layout.addLayout(gpu_layout, 0, 2)
+            label = QLabel(f"{label_text} 0.0%")
+            label.setAlignment(Qt.AlignCenter)
+            vlayout.addWidget(label, alignment=Qt.AlignCenter)
 
-            vram_layout, self.vram_meter, self.vram_label = self._create_speedometer_group("VRAM")
-            layout.addLayout(vram_layout, 0, 3)
-
-            power_layout, self.power_meter, self.power_label = self._create_speedometer_group("GPU Power")
-            layout.addLayout(power_layout, 0, 4)
+            layout.addLayout(vlayout, 0, col)
+            self._meters[key] = speedometer
+            self._labels[key] = (label_text, label)
 
         for i in range(layout.columnCount()):
             layout.setColumnStretch(i, 1)
 
-    def _create_speedometer_group(self, name: str):
-        layout = QVBoxLayout()
-        layout.setSpacing(2)
-
-        speedometer = Speedometer(colors=["#00FF00", "#FFFF00", "#FF0000"])
-        speedometer.setFixedSize(105, 105)
-        layout.addWidget(speedometer, alignment=Qt.AlignCenter)
-
-        label = QLabel(f"{name} 0.0%")
-        label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(label, alignment=Qt.AlignCenter)
-
-        return layout, speedometer, label
-
     def update_metrics(self, metrics: SystemMetrics):
-        self.cpu_meter.set_value(metrics.cpu_usage)
-        self.cpu_label.setText(f"CPU {metrics.cpu_usage:.1f}%")
-
-        self.ram_meter.set_value(metrics.ram_usage_percent)
-        self.ram_label.setText(f"RAM {metrics.ram_usage_percent:.1f}%")
-
-        if self.has_nvidia_gpu and metrics.gpu_utilization is not None:
-            self.gpu_meter.set_value(metrics.gpu_utilization)
-            self.gpu_label.setText(f"GPU {metrics.gpu_utilization:.1f}%")
-
-            self.vram_meter.set_value(metrics.vram_usage_percent)
-            self.vram_label.setText(f"VRAM {metrics.vram_usage_percent:.1f}%")
-
-            self.power_meter.set_value(metrics.power_usage_percent)
-            self.power_label.setText(f"GPU Power {metrics.power_usage_percent:.1f}%")
+        for key, _, _, _, accessor, _ in self._active_metrics():
+            value = accessor(metrics)
+            if value is not None:
+                self._meters[key].set_value(value)
+                label_text, label = self._labels[key]
+                label.setText(f"{label_text} {value:.1f}%")
 
 
 class ArcGraph(QWidget):
@@ -485,6 +419,8 @@ class ArcGraphVisualization(BaseVisualization):
 
     def __init__(self, metrics_store: MetricsStore, has_nvidia_gpu: bool):
         super().__init__(metrics_store, has_nvidia_gpu)
+        self._arcs = {}
+        self._labels = {}
         self._init_ui()
 
     def _init_ui(self):
@@ -492,51 +428,28 @@ class ArcGraphVisualization(BaseVisualization):
         layout.setSpacing(1)
         layout.setContentsMargins(1, 1, 1, 1)
 
-        cpu_layout, self.cpu_arc, self.cpu_label = self._create_arc_group("CPU", "#FF4136")
-        layout.addLayout(cpu_layout, 0, 0)
+        for col, (key, label_text, _, color, _, _) in enumerate(self._active_metrics()):
+            vlayout = QVBoxLayout()
+            vlayout.setSpacing(2)
 
-        ram_layout, self.ram_arc, self.ram_label = self._create_arc_group("RAM", "#B10DC9")
-        layout.addLayout(ram_layout, 0, 1)
+            arc = ArcGraph(color=color)
+            vlayout.addWidget(arc, alignment=Qt.AlignCenter)
 
-        if self.has_nvidia_gpu:
-            gpu_layout, self.gpu_arc, self.gpu_label = self._create_arc_group("GPU", "#0074D9")
-            layout.addLayout(gpu_layout, 0, 2)
+            label = QLabel(label_text)
+            label.setAlignment(Qt.AlignCenter)
+            vlayout.addWidget(label, alignment=Qt.AlignCenter)
 
-            vram_layout, self.vram_arc, self.vram_label = self._create_arc_group("VRAM", "#2ECC40")
-            layout.addLayout(vram_layout, 0, 3)
-
-            power_layout, self.power_arc, self.power_label = self._create_arc_group("GPU Power", "#FFD700")
-            layout.addLayout(power_layout, 0, 4)
+            layout.addLayout(vlayout, 0, col)
+            self._arcs[key] = arc
+            self._labels[key] = (label_text, label)
 
         for i in range(layout.columnCount()):
             layout.setColumnStretch(i, 1)
 
-    def _create_arc_group(self, name: str, color: str):
-        layout = QVBoxLayout()
-        layout.setSpacing(2)
-
-        arc = ArcGraph(color=color)
-        layout.addWidget(arc, alignment=Qt.AlignCenter)
-
-        label = QLabel(name)
-        label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(label, alignment=Qt.AlignCenter)
-
-        return layout, arc, label
-
     def update_metrics(self, metrics: SystemMetrics):
-        self.cpu_arc.set_value(metrics.cpu_usage)
-        self.cpu_label.setText(f"CPU {metrics.cpu_usage:.1f}%")
-
-        self.ram_arc.set_value(metrics.ram_usage_percent)
-        self.ram_label.setText(f"RAM {metrics.ram_usage_percent:.1f}%")
-
-        if self.has_nvidia_gpu and metrics.gpu_utilization is not None:
-            self.gpu_arc.set_value(metrics.gpu_utilization)
-            self.gpu_label.setText(f"GPU {metrics.gpu_utilization:.1f}%")
-
-            self.vram_arc.set_value(metrics.vram_usage_percent)
-            self.vram_label.setText(f"VRAM {metrics.vram_usage_percent:.1f}%")
-
-            self.power_arc.set_value(metrics.power_usage_percent)
-            self.power_label.setText(f"GPU Power {metrics.power_usage_percent:.1f}%")
+        for key, _, _, _, accessor, _ in self._active_metrics():
+            value = accessor(metrics)
+            if value is not None:
+                self._arcs[key].set_value(value)
+                label_text, label = self._labels[key]
+                label.setText(f"{label_text} {value:.1f}%")

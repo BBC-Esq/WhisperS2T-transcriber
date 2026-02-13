@@ -7,7 +7,7 @@ import torch
 import whisper_s2t
 
 from config.constants import WHISPER_MODELS
-from utils.system_utils import get_logical_core_count
+from utils.system_utils import get_optimal_cpu_threads
 
 class ModelManager(QObject):
     model_loaded = Signal(str, str)
@@ -18,7 +18,7 @@ class ModelManager(QObject):
         self._current_model = None
         self._current_config = None
         self._model_mutex = QMutex()
-        self._cpu_threads = max(4, get_logical_core_count() - 8)
+        self._cpu_threads = get_optimal_cpu_threads()
 
     def get_or_load_model(self, model_key: str, device: str, 
                          beam_size: int, precision: str) -> Optional[Any]:
