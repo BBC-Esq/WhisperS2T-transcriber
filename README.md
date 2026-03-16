@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="768" height="182" alt="splash" src="https://github.com/user-attachments/assets/23a1367c-6edc-4c2e-9ae3-7089dcfd4b04" />
+<img width="669" height="336" alt="image" src="https://github.com/user-attachments/assets/2bab9c15-8206-4418-94e8-ac38efd16269" />
 
 ## Extremely Fast Transcription of Multiple Audio Files
 ### Requires 🐍 [Python 3.11](https://www.python.org/downloads/release/python-3119/), [3.12](https://www.python.org/downloads/release/python-31210/) or [3.13](https://www.python.org/downloads/release/python-31311/), 📁 [Git](https://git-scm.com/downloads), 📁 [Git Large File Storage](https://git-lfs.com/), and 🎵 [FFmpeg](https://github.com/BtbN/FFmpeg-Builds/releases/tag/latest)
