@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, Signal
 from config.constants import (
     MODEL_NAMES, MODEL_PRECISIONS, DISTIL_MODELS, WHISPER_LANGUAGES,
     OUTPUT_FORMATS, TASK_MODES, SUPPORTED_AUDIO_EXTENSIONS,
-    DEFAULT_BEAM_SIZE, DEFAULT_BATCH_SIZE,
+    DEFAULT_BATCH_SIZE,
     DEFAULT_OUTPUT_FORMAT, DEFAULT_TASK_MODE, DEFAULT_LANGUAGE
 )
 from utils.system_utils import get_compute_and_platform_info, has_bfloat16_support
@@ -101,12 +101,6 @@ class SettingsWidget(QGroupBox):
         layout.addLayout(row2)
 
         row3 = QHBoxLayout()
-        row3.addWidget(QLabel("Beam Size:"))
-        self.beam_combo = QComboBox()
-        self.beam_combo.addItems([str(i) for i in range(1, 6)])
-        self.beam_combo.setCurrentText(str(DEFAULT_BEAM_SIZE))
-        row3.addWidget(self.beam_combo)
-
         row3.addWidget(QLabel("Batch Size:"))
         self.batch_slider = QSlider(Qt.Horizontal)
         self.batch_slider.setMinimum(1)
@@ -223,9 +217,6 @@ class SettingsWidget(QGroupBox):
 
     def get_language(self) -> str:
         return self.language_combo.currentData()
-
-    def get_beam_size(self) -> int:
-        return int(self.beam_combo.currentText())
 
     def get_batch_size(self) -> int:
         return self.batch_slider.value()

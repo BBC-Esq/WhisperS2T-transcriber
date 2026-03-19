@@ -131,7 +131,7 @@ class MainWindow(QWidget):
         return TranscriptionSettings(
             model_key=self.settings_widget.get_model(),
             device=self.settings_widget.get_device(),
-            beam_size=self.settings_widget.get_beam_size(),
+            beam_size=1,
             batch_size=self.settings_widget.get_batch_size(),
             output_format=self.settings_widget.get_output_format(),
             task_mode=self.settings_widget.get_task_mode(),
