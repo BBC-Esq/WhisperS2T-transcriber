@@ -1,16 +1,47 @@
 from PySide6.QtWidgets import (
     QGroupBox, QVBoxLayout, QHBoxLayout, QLabel,
-    QComboBox, QSlider
+    QComboBox, QSlider, QCheckBox, QPushButton,
+    QDialog, QDialogButtonBox, QGridLayout,
 )
 from PySide6.QtCore import Qt, Signal
 
 from config.constants import (
     MODEL_NAMES, MODEL_PRECISIONS, DISTIL_MODELS, WHISPER_LANGUAGES,
-    OUTPUT_FORMATS, TASK_MODES,
+    OUTPUT_FORMATS, TASK_MODES, SUPPORTED_AUDIO_EXTENSIONS,
     DEFAULT_BEAM_SIZE, DEFAULT_BATCH_SIZE,
     DEFAULT_OUTPUT_FORMAT, DEFAULT_TASK_MODE, DEFAULT_LANGUAGE
 )
 from utils.system_utils import get_compute_and_platform_info, has_bfloat16_support
+
+
+class ExtensionsDialog(QDialog):
+    def __init__(self, current_extensions, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("File Extensions")
+        self.setMinimumWidth(350)
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel(
+            "Select which audio file extensions to include when processing.\n"
+            "All extensions are enabled by default."
+        ))
+
+        grid = QGridLayout()
+        self.checkboxes = {}
+        for i, ext in enumerate(SUPPORTED_AUDIO_EXTENSIONS):
+            cb = QCheckBox(ext)
+            cb.setChecked(ext in current_extensions)
+            self.checkboxes[ext] = cb
+            grid.addWidget(cb, i // 4, i % 4)
+        layout.addLayout(grid)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_selected(self):
+        return [ext for ext, cb in self.checkboxes.items() if cb.isChecked()]
 
 
 class SettingsWidget(QGroupBox):
@@ -20,6 +51,7 @@ class SettingsWidget(QGroupBox):
     def __init__(self, parent=None):
         super().__init__("Settings", parent)
         self._bfloat16_supported = has_bfloat16_support()
+        self._selected_extensions = list(SUPPORTED_AUDIO_EXTENSIONS)
         self._init_ui()
         self._populate_devices()
 
@@ -62,6 +94,10 @@ class SettingsWidget(QGroupBox):
             self.language_combo.addItem(f"{name} ({code})", code)
         self._set_language_by_code(DEFAULT_LANGUAGE)
         row2.addWidget(self.language_combo)
+
+        self.extensions_button = QPushButton("File Extensions")
+        self.extensions_button.clicked.connect(self._open_extensions_dialog)
+        row2.addWidget(self.extensions_button)
         layout.addLayout(row2)
 
         row3 = QHBoxLayout()
@@ -106,6 +142,11 @@ class SettingsWidget(QGroupBox):
     def _on_model_changed(self, model_name: str):
         self._update_precision_options()
         self._update_model_constraints()
+
+    def _open_extensions_dialog(self):
+        dlg = ExtensionsDialog(self._selected_extensions, self)
+        if dlg.exec() == QDialog.Accepted:
+            self._selected_extensions = dlg.get_selected()
 
     def _update_precision_options(self):
         model_name = self.model_combo.currentText()
@@ -188,3 +229,6 @@ class SettingsWidget(QGroupBox):
 
     def get_batch_size(self) -> int:
         return self.batch_slider.value()
+
+    def get_selected_extensions(self) -> list:
+        return list(self._selected_extensions)

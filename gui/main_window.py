@@ -5,7 +5,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QCheckBox, QFileDialog, QMessageBox
 )
 
-from config.constants import SUPPORTED_AUDIO_EXTENSIONS
 from config.settings import TranscriptionSettings
 from core.models.manager import ModelManager
 from core.transcription.file_scanner import FileScanner
@@ -43,19 +42,6 @@ class MainWindow(QWidget):
 
         transcriber_group.setLayout(transcriber_layout)
         layout.addWidget(transcriber_group)
-
-        extensions_group = QGroupBox("File Extensions")
-        extensions_layout = QHBoxLayout()
-
-        self.extension_checkboxes = {}
-        for ext in SUPPORTED_AUDIO_EXTENSIONS:
-            checkbox = QCheckBox(ext)
-            checkbox.setChecked(True)
-            self.extension_checkboxes[ext] = checkbox
-            extensions_layout.addWidget(checkbox)
-
-        extensions_group.setLayout(extensions_layout)
-        layout.addWidget(extensions_group)
 
         self.settings_widget = SettingsWidget()
         layout.addWidget(self.settings_widget)
@@ -151,10 +137,7 @@ class MainWindow(QWidget):
             task_mode=self.settings_widget.get_task_mode(),
             language=self.settings_widget.get_language(),
             recursive=self.recursive_checkbox.isChecked(),
-            selected_extensions=[
-                ext for ext, cb in self.extension_checkboxes.items()
-                if cb.isChecked()
-            ]
+            selected_extensions=self.settings_widget.get_selected_extensions(),
         )
 
     @Slot(str)
