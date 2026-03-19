@@ -4,7 +4,6 @@
 
 ## Fast Transcription of Multiple Audio Files
 ### Requires 📁 [Git](https://git-scm.com/downloads), 📁 [Git Large File Storage](https://git-lfs.com/)
-**(Make sure FFMPEG is added to your system path)**
 
 <img width="680" height="430" alt="image" src="https://github.com/user-attachments/assets/2c03c8f5-2aec-46b5-b85c-9811bc39daf9" />
 
