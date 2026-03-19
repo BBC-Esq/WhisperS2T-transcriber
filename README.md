@@ -6,7 +6,7 @@
 ### Requires 📁 [Git](https://git-scm.com/downloads), 📁 [Git Large File Storage](https://git-lfs.com/), and 🎵 [FFmpeg](https://github.com/BtbN/FFmpeg-Builds/releases/tag/latest)
 **(Make sure FFMPEG is added to your system path)**
 
-<img width="698" height="454" alt="image" src="https://github.com/user-attachments/assets/cb62d1cf-9837-4a32-a1b3-479544699b36" />
+<img width="680" height="432" alt="image" src="https://github.com/user-attachments/assets/37d3cf03-cbca-450f-84c6-74a9deaf1b4a" />
 
 </div>
 
