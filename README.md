@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="669" height="336" alt="image" src="https://github.com/user-attachments/assets/2bab9c15-8206-4418-94e8-ac38efd16269" />
+<img width="679" height="429" alt="image" src="https://github.com/user-attachments/assets/9efddc15-2084-413a-9225-391c9c49f23c" />
 
 ## Extremely Fast Transcription of Multiple Audio Files
 ### Requires 📁 [Git](https://git-scm.com/downloads), 📁 [Git Large File Storage](https://git-lfs.com/), and 🎵 [FFmpeg](https://github.com/BtbN/FFmpeg-Builds/releases/tag/latest)
