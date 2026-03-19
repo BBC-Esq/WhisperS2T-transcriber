@@ -33,7 +33,7 @@ libs = [
     "pyside6",
     "requests",
     "sympy==1.13.3",
-    "whisper-s2t-reborn==1.4.4",
+    "whisper-s2t-reborn[pyav]==1.5.2",
 ]
 
 
