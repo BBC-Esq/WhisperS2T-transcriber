@@ -21,7 +21,7 @@ class ConfigManager:
         "device_types": {"cpu", "cuda"},
         "task_modes": {"transcribe", "translate"},
         "precisions": {"float16", "float32", "bfloat16"},
-        "output_formats": {"txt", "srt", "vtt", "tsv", "json"},
+        "output_formats": {"txt", "srt", "vtt", "json"},
         "single_file_output_modes": {
             "clipboard", "save_to_source", "save_and_clipboard", "save_to_custom"
         },

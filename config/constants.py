@@ -95,7 +95,7 @@ SUPPORTED_AUDIO_EXTENSIONS = [
     ".mkv", ".mp3", ".mp4", ".wav", ".webm", ".wma"
 ]
 
-OUTPUT_FORMATS = ["txt", "vtt", "srt", "tsv", "json"]
+OUTPUT_FORMATS = ["txt", "vtt", "srt", "json"]
 TASK_MODES = ["transcribe", "translate"]
 
 DEFAULT_BEAM_SIZE = 1
