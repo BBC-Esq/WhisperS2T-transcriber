@@ -1,0 +1,56 @@
+# Virtual environment (this directory is itself the venv)
+Lib/
+Scripts/
+Include/
+share/
+pyvenv.cfg
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Build artifacts (setup exe gets copied here to track latest version)
+*.exe
+
+# Logs
+logs/
+
+# Runtime/temp
+runtime/
+.lock
+nul
+
+# Test audio
+TEST_SINGLE/
+TEST_MULTIPLE/
+TEST FILES/
+tests/
+
+# Development (local research, benchmarks, analysis)
+DEVELOPMENT/
+
+# Tools (embedded Python, uv)
+tools/
+
+# Installer assets and output
+installer/
+installer-output/
+
+# Generated file listing
+compiled_files.txt
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Local config files (per-user state)
+settings.yaml
+config.yaml

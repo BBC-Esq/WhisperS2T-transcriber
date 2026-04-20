@@ -29,10 +29,19 @@ gpu_libs = [
 
 libs = [
     "ctranslate2==4.6.2",
+    "fastapi",
+    "huggingface_hub",
     "psutil",
+    "pydantic",
+    "pynput",
     "pyside6",
+    "python-multipart",
+    "pyyaml",
     "requests",
+    "sounddevice",
     "sympy==1.13.3",
+    "tqdm",
+    "uvicorn",
     "whisper-s2t-reborn[pyav]==1.5.2",
 ]
 

@@ -1,0 +1,535 @@
+from __future__ import annotations
+
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+
+from config.constants import WHISPER_LANGUAGES
+from core.audio.device_utils import get_input_devices
+from core.logging_config import get_logger
+from core.models.metadata import ModelMetadata
+from gui.file_panel import SUPPORTED_AUDIO_EXTENSIONS, FileTypesDialog, ToggleSwitch
+from gui.styles import update_button_property
+
+logger = get_logger(__name__)
+
+
+class SettingsDialog(QDialog):
+    model_update_requested = Signal(str, str, str, int)  # model, precision, device, beam_size
+    audio_device_changed = Signal(str, str)
+    task_mode_changed = Signal(str)
+    language_changed = Signal(str)
+    whisper_settings_changed = Signal(object)  # dict with include_timestamps, batch-side settings
+    file_types_changed = Signal(object)
+    server_mode_changed = Signal(bool, int)
+
+    def __init__(
+        self,
+        parent: QWidget | None,
+        cuda_available: bool,
+        supported_quantizations: dict[str, list[str]],
+        current_settings: dict[str, str],
+        current_task_mode: str = "transcribe",
+        current_language: str = "en",
+        current_audio_device: dict[str, str] | None = None,
+        current_whisper_settings: dict | None = None,
+        current_ext_checked: dict[str, bool] | None = None,
+        current_server_settings: dict | None = None,
+        is_busy_check=None,
+    ):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+        self.setModal(True)
+        self.setMinimumWidth(640)
+        self.resize(640, self.sizeHint().height())
+
+        self.cuda_available = cuda_available
+        self.supported_quantizations = supported_quantizations
+        self.current_settings = dict(current_settings)
+        self.current_task_mode = current_task_mode
+        self.current_language = current_language
+        self.current_audio_device = current_audio_device or {"name": "", "hostapi": ""}
+        self.current_whisper_settings = current_whisper_settings or {
+            "beam_size": 1,
+            "include_timestamps": False,
+        }
+        self.current_server_settings = current_server_settings or {
+            "server_mode_enabled": False,
+            "server_port": 8765,
+        }
+        self._is_busy_check = is_busy_check or (lambda: False)
+        self._ext_checked = current_ext_checked or {
+            ext: True for ext in SUPPORTED_AUDIO_EXTENSIONS
+        }
+
+        self._input_devices = get_input_devices()
+
+        self._build_ui()
+        self._setup_connections()
+        self._populate_from_settings()
+        self._check_for_changes()
+
+    def _build_ui(self) -> None:
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(16, 16, 16, 16)
+        outer_layout.setSpacing(12)
+
+        columns_layout = QHBoxLayout()
+        columns_layout.setSpacing(16)
+
+        # --- Left column ---
+        left_column = QVBoxLayout()
+        left_column.setSpacing(12)
+
+        model_group = QGroupBox("Whisper Model")
+        model_form = QFormLayout(model_group)
+        model_form.setHorizontalSpacing(12)
+        model_form.setVerticalSpacing(10)
+
+        self.model_dropdown = QComboBox()
+        self.model_dropdown.addItems(ModelMetadata.get_all_model_names())
+        model_form.addRow("Model", self.model_dropdown)
+
+        self.device_dropdown = QComboBox()
+        devices = ["cpu", "cuda"] if self.cuda_available else ["cpu"]
+        self.device_dropdown.addItems(devices)
+        model_form.addRow("Device", self.device_dropdown)
+
+        self.precision_dropdown = QComboBox()
+        model_form.addRow("Precision", self.precision_dropdown)
+
+        self.model_desc_label = QLabel("")
+        self.model_desc_label.setWordWrap(True)
+        self.model_desc_label.setStyleSheet("color: #aaaaaa; font-size: 11px;")
+        model_form.addRow("", self.model_desc_label)
+
+        left_column.addWidget(model_group)
+
+        task_group = QGroupBox("Task & Language")
+        task_form = QFormLayout(task_group)
+        task_form.setHorizontalSpacing(12)
+        task_form.setVerticalSpacing(10)
+
+        self.task_dropdown = QComboBox()
+        task_form.addRow("Task", self.task_dropdown)
+
+        self.language_dropdown = QComboBox()
+        for code, name in WHISPER_LANGUAGES.items():
+            self.language_dropdown.addItem(f"{name} ({code})", code)
+        task_form.addRow("Language", self.language_dropdown)
+
+        left_column.addWidget(task_group)
+
+        audio_group = QGroupBox("Audio Input")
+        audio_form = QFormLayout(audio_group)
+        audio_form.setHorizontalSpacing(12)
+        audio_form.setVerticalSpacing(10)
+
+        self.audio_device_dropdown = QComboBox()
+        self.audio_device_dropdown.addItem("System Default", None)
+        for dev in self._input_devices:
+            display = f"{dev['name']} ({dev['hostapi']})"
+            self.audio_device_dropdown.addItem(display, dev)
+        audio_form.addRow("Input Device", self.audio_device_dropdown)
+
+        left_column.addWidget(audio_group)
+        left_column.addStretch(1)
+
+        columns_layout.addLayout(left_column, 1)
+
+        # --- Right column ---
+        right_column = QVBoxLayout()
+        right_column.setSpacing(12)
+
+        whisper_group = QGroupBox("WhisperS2T Settings")
+        whisper_form = QFormLayout(whisper_group)
+        whisper_form.setHorizontalSpacing(12)
+        whisper_form.setVerticalSpacing(10)
+
+        self.beam_size_spin = QSpinBox()
+        self.beam_size_spin.setRange(1, 5)
+        self.beam_size_spin.setToolTip(
+            "Number of beams for decoding (higher = more accurate, slower). "
+            "Changing this reloads the model."
+        )
+        whisper_form.addRow("Beam Size", self.beam_size_spin)
+
+        self.include_timestamps_cb = QCheckBox()
+        self.include_timestamps_cb.setToolTip(
+            "Include segment timestamps in file outputs (always enabled for SRT/VTT)."
+        )
+        whisper_form.addRow("Include Timestamps", self.include_timestamps_cb)
+
+        vad_note = QLabel(
+            "<qt>VAD (voice activity detection) is always on — it's baked into "
+            "WhisperS2T's <code>transcribe_with_vad</code> and can't be disabled.</qt>"
+        )
+        vad_note.setWordWrap(True)
+        vad_note.setStyleSheet("color: #aaaaaa; font-size: 11px;")
+        whisper_form.addRow("", vad_note)
+
+        right_column.addWidget(whisper_group)
+
+        server_group = QGroupBox("Server Mode")
+        server_vbox = QVBoxLayout(server_group)
+        server_vbox.setContentsMargins(12, 10, 12, 10)
+        server_vbox.setSpacing(8)
+
+        toggle_row = QHBoxLayout()
+        toggle_row.setSpacing(6)
+        self._server_off_label = QLabel("Off")
+        self._server_off_label.setStyleSheet("font-size: 11px;")
+        toggle_row.addWidget(self._server_off_label)
+        self.server_mode_toggle = ToggleSwitch()
+        toggle_row.addWidget(self.server_mode_toggle)
+        self._server_on_label = QLabel("On")
+        self._server_on_label.setStyleSheet("font-size: 11px;")
+        toggle_row.addWidget(self._server_on_label)
+        toggle_row.addSpacing(16)
+        toggle_row.addWidget(QLabel("Port:"))
+        self.server_port_spin = QSpinBox()
+        self.server_port_spin.setRange(1024, 65535)
+        self.server_port_spin.setToolTip(
+            "TCP port for the HTTP API (default 8765)."
+        )
+        toggle_row.addWidget(self.server_port_spin)
+        toggle_row.addStretch(1)
+        server_vbox.addLayout(toggle_row)
+
+        server_hint = QLabel(
+            "<qt>When On, an HTTP API is exposed at <code>http://0.0.0.0:&lt;port&gt;</code>. "
+            "Endpoints: <code>/transcribe</code>, <code>/transcribe/raw</code>, "
+            "<code>/models</code>, <code>/status</code>, <code>/health</code>.</qt>"
+        )
+        server_hint.setWordWrap(True)
+        server_hint.setStyleSheet("color: #aaaaaa; font-size: 11px;")
+        server_vbox.addWidget(server_hint)
+
+        right_column.addWidget(server_group)
+
+        file_types_row = QHBoxLayout()
+        file_types_row.addStretch(1)
+        self._file_types_btn = QPushButton("File Types...")
+        self._file_types_btn.setFixedHeight(28)
+        self._file_types_btn.setFixedWidth(110)
+        self._file_types_btn.setToolTip(
+            "Configure which audio/video file types are scanned in batch mode"
+        )
+        self._file_types_btn.clicked.connect(self._open_file_types_dialog)
+        file_types_row.addWidget(self._file_types_btn)
+        right_column.addLayout(file_types_row)
+
+        right_column.addStretch(1)
+
+        columns_layout.addLayout(right_column, 1)
+        outer_layout.addLayout(columns_layout)
+
+        # --- Bottom buttons ---
+        button_row = QHBoxLayout()
+        button_row.setSpacing(10)
+
+        self.update_btn = QPushButton("Update Settings")
+        self.update_btn.setObjectName("updateButton")
+        self.update_btn.setEnabled(False)
+        self.update_btn.clicked.connect(self._on_update_clicked)
+        button_row.addWidget(self.update_btn)
+
+        close_btn = QPushButton("Close")
+        close_btn.setObjectName("closeButton")
+        close_btn.clicked.connect(self.reject)
+        button_row.addWidget(close_btn)
+
+        self.update_btn.setFixedHeight(35)
+        close_btn.setFixedHeight(35)
+        outer_layout.addLayout(button_row)
+
+    def _setup_connections(self) -> None:
+        self.model_dropdown.currentTextChanged.connect(self._update_precision_options)
+        self.model_dropdown.currentTextChanged.connect(self._update_task_availability)
+        self.model_dropdown.currentTextChanged.connect(self._update_language_availability)
+        self.model_dropdown.currentTextChanged.connect(self._update_description)
+        self.device_dropdown.currentTextChanged.connect(self._update_precision_options)
+        self.model_dropdown.currentTextChanged.connect(self._check_for_changes)
+        self.device_dropdown.currentTextChanged.connect(self._check_for_changes)
+        self.precision_dropdown.currentTextChanged.connect(self._check_for_changes)
+        self.task_dropdown.currentTextChanged.connect(self._check_for_changes)
+        self.language_dropdown.currentIndexChanged.connect(self._check_for_changes)
+        self.audio_device_dropdown.currentIndexChanged.connect(self._check_for_changes)
+        self.beam_size_spin.valueChanged.connect(self._check_for_changes)
+        self.include_timestamps_cb.toggled.connect(self._check_for_changes)
+        self.server_mode_toggle.toggled.connect(self._check_for_changes)
+        self.server_port_spin.valueChanged.connect(self._check_for_changes)
+
+    def _populate_from_settings(self) -> None:
+        self.model_dropdown.setCurrentText(
+            self.current_settings.get("model_name", "Whisper tiny.en")
+        )
+        self.device_dropdown.setCurrentText(
+            self.current_settings.get("device_type", "cpu")
+        )
+        self._update_precision_options()
+        self.precision_dropdown.setCurrentText(
+            self.current_settings.get("precision", "float32")
+        )
+        self._update_task_availability()
+        self.task_dropdown.setCurrentText(self.current_task_mode)
+        self._update_language_availability()
+        self._select_language(self.current_language)
+        self._update_description()
+
+        self._select_audio_device()
+
+        self.beam_size_spin.setValue(
+            int(self.current_whisper_settings.get("beam_size", 1))
+        )
+        self.include_timestamps_cb.setChecked(
+            bool(self.current_whisper_settings.get("include_timestamps", False))
+        )
+
+        self.server_mode_toggle.blockSignals(True)
+        self.server_mode_toggle.setChecked(
+            bool(self.current_server_settings.get("server_mode_enabled", False))
+        )
+        self.server_mode_toggle.blockSignals(False)
+        self.server_port_spin.blockSignals(True)
+        self.server_port_spin.setValue(
+            int(self.current_server_settings.get("server_port", 8765))
+        )
+        self.server_port_spin.blockSignals(False)
+        self._apply_server_mode_lock()
+
+    def _select_audio_device(self) -> None:
+        saved_name = self.current_audio_device.get("name", "")
+        saved_hostapi = self.current_audio_device.get("hostapi", "")
+
+        if not saved_name:
+            self.audio_device_dropdown.setCurrentIndex(0)
+            return
+
+        for i in range(1, self.audio_device_dropdown.count()):
+            data = self.audio_device_dropdown.itemData(i)
+            if data and data["name"] == saved_name:
+                if saved_hostapi and data["hostapi"] == saved_hostapi:
+                    self.audio_device_dropdown.setCurrentIndex(i)
+                    return
+
+        for i in range(1, self.audio_device_dropdown.count()):
+            data = self.audio_device_dropdown.itemData(i)
+            if data and data["name"] == saved_name:
+                self.audio_device_dropdown.setCurrentIndex(i)
+                return
+
+        self.audio_device_dropdown.setCurrentIndex(0)
+
+    def _select_language(self, code: str) -> None:
+        for i in range(self.language_dropdown.count()):
+            if self.language_dropdown.itemData(i) == code:
+                self.language_dropdown.setCurrentIndex(i)
+                return
+        self.language_dropdown.setCurrentIndex(0)
+
+    def _update_precision_options(self) -> None:
+        model = self.model_dropdown.currentText()
+        device = self.device_dropdown.currentText()
+        opts = ModelMetadata.get_quantization_options(
+            model, device, self.supported_quantizations
+        )
+
+        self.precision_dropdown.blockSignals(True)
+        current = self.precision_dropdown.currentText()
+        self.precision_dropdown.clear()
+        self.precision_dropdown.addItems(opts)
+        if current in opts:
+            self.precision_dropdown.setCurrentText(current)
+        elif opts:
+            self.precision_dropdown.setCurrentText(opts[0])
+        self.precision_dropdown.blockSignals(False)
+        self._check_for_changes()
+
+    def _update_task_availability(self) -> None:
+        model = self.model_dropdown.currentText()
+        can_translate = ModelMetadata.supports_translation(model)
+
+        self.task_dropdown.blockSignals(True)
+        current = self.task_dropdown.currentText()
+        self.task_dropdown.clear()
+        self.task_dropdown.addItem("transcribe")
+        if can_translate:
+            self.task_dropdown.addItem("translate")
+
+        if current == "translate" and can_translate:
+            self.task_dropdown.setCurrentText("translate")
+        else:
+            self.task_dropdown.setCurrentText("transcribe")
+        self.task_dropdown.blockSignals(False)
+        self._check_for_changes()
+
+    def _update_language_availability(self) -> None:
+        model = self.model_dropdown.currentText()
+        english_only = ModelMetadata.is_english_only(model)
+        if english_only:
+            self._select_language("en")
+        self.language_dropdown.setEnabled(not english_only)
+
+    def _update_description(self) -> None:
+        model = self.model_dropdown.currentText()
+        self.model_desc_label.setText(ModelMetadata.get_description(model))
+
+    def _model_settings_changed(self) -> bool:
+        current = {
+            "model_name": self.model_dropdown.currentText(),
+            "precision": self.precision_dropdown.currentText(),
+            "device_type": self.device_dropdown.currentText(),
+        }
+        return current != self.current_settings
+
+    def _task_mode_selection_changed(self) -> bool:
+        return self.task_dropdown.currentText() != self.current_task_mode
+
+    def _language_selection_changed(self) -> bool:
+        return self.language_dropdown.currentData() != self.current_language
+
+    def _audio_device_selection_changed(self) -> bool:
+        data = self.audio_device_dropdown.currentData()
+        if data is None:
+            return bool(self.current_audio_device.get("name", ""))
+        return (
+            data["name"] != self.current_audio_device.get("name", "")
+            or data["hostapi"] != self.current_audio_device.get("hostapi", "")
+        )
+
+    def _whisper_settings_selection_changed(self) -> bool:
+        current = {
+            "beam_size": self.beam_size_spin.value(),
+            "include_timestamps": self.include_timestamps_cb.isChecked(),
+        }
+        return current != self.current_whisper_settings
+
+    def _server_settings_selection_changed(self) -> bool:
+        current = {
+            "server_mode_enabled": self.server_mode_toggle.isChecked(),
+            "server_port": self.server_port_spin.value(),
+        }
+        return current != self.current_server_settings
+
+    def _apply_server_mode_lock(self) -> None:
+        server_on = bool(self.current_server_settings.get("server_mode_enabled", False))
+        locked_widgets = [
+            self.model_dropdown,
+            self.device_dropdown,
+            self.precision_dropdown,
+            self.audio_device_dropdown,
+            self.task_dropdown,
+            self.language_dropdown,
+            self.beam_size_spin,
+            self.include_timestamps_cb,
+        ]
+        for w in locked_widgets:
+            w.setEnabled(not server_on)
+        if server_on:
+            # Re-evaluate language / task availability so we don't leave language
+            # enabled for an .en model once the server is toggled off.
+            pass
+        else:
+            self._update_language_availability()
+
+    def _check_for_changes(self) -> None:
+        model_changed = self._model_settings_changed()
+        task_changed = self._task_mode_selection_changed()
+        language_changed = self._language_selection_changed()
+        audio_changed = self._audio_device_selection_changed()
+        whisper_changed = self._whisper_settings_selection_changed()
+        server_changed = self._server_settings_selection_changed()
+        has_changes = (
+            model_changed
+            or task_changed
+            or language_changed
+            or audio_changed
+            or whisper_changed
+            or server_changed
+        )
+        self.update_btn.setEnabled(has_changes)
+        # Model reload covers both model/precision/device changes and beam_size
+        # changes (beam_size is baked into model load).
+        beam_changed = (
+            self.beam_size_spin.value() != self.current_whisper_settings.get("beam_size", 1)
+        )
+        if model_changed or beam_changed:
+            self.update_btn.setText("Reload Model")
+        else:
+            self.update_btn.setText("Update Settings")
+        update_button_property(self.update_btn, "changed", has_changes)
+
+    def _open_file_types_dialog(self) -> None:
+        dlg = FileTypesDialog(self, self._ext_checked)
+        if dlg.exec() == QDialog.Accepted:
+            self._ext_checked = dlg.get_checked()
+            self.file_types_changed.emit(self._ext_checked)
+
+    def _on_update_clicked(self) -> None:
+        beam_changed = (
+            self.beam_size_spin.value() != self.current_whisper_settings.get("beam_size", 1)
+        )
+
+        if self._server_settings_selection_changed():
+            wants_server_on = self.server_mode_toggle.isChecked()
+            currently_on = bool(
+                self.current_server_settings.get("server_mode_enabled", False)
+            )
+            if wants_server_on and not currently_on and self._is_busy_check():
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    self,
+                    "Busy",
+                    "A transcription or batch job is currently running. "
+                    "Wait for it to finish before turning Server Mode on.",
+                )
+                self.server_mode_toggle.blockSignals(True)
+                self.server_mode_toggle.setChecked(False)
+                self.server_mode_toggle.blockSignals(False)
+
+        if self._model_settings_changed() or beam_changed:
+            model = self.model_dropdown.currentText()
+            precision = self.precision_dropdown.currentText()
+            device = self.device_dropdown.currentText()
+            self.model_update_requested.emit(model, precision, device, self.beam_size_spin.value())
+
+        if self._task_mode_selection_changed():
+            self.task_mode_changed.emit(self.task_dropdown.currentText())
+
+        if self._language_selection_changed():
+            code = self.language_dropdown.currentData() or "en"
+            self.language_changed.emit(code)
+
+        if self._audio_device_selection_changed():
+            data = self.audio_device_dropdown.currentData()
+            if data is None:
+                self.audio_device_changed.emit("", "")
+            else:
+                self.audio_device_changed.emit(data["name"], data["hostapi"])
+
+        if self._whisper_settings_selection_changed():
+            settings = {
+                "beam_size": self.beam_size_spin.value(),
+                "include_timestamps": self.include_timestamps_cb.isChecked(),
+            }
+            self.whisper_settings_changed.emit(settings)
+
+        if self._server_settings_selection_changed():
+            self.server_mode_changed.emit(
+                self.server_mode_toggle.isChecked(),
+                self.server_port_spin.value(),
+            )
+
+        self.accept()

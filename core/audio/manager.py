@@ -1,0 +1,116 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
+from PySide6.QtCore import QObject, Signal, Slot
+
+from core.audio.recording import RecordingThread
+from core.logging_config import get_logger
+from core.temp_file_manager import temp_file_manager
+
+logger = get_logger(__name__)
+
+
+class AudioManager(QObject):
+    recording_started = Signal()
+    recording_stopped = Signal()
+    audio_ready = Signal(str)
+    audio_error = Signal(str)
+
+    def __init__(self, samplerate: int = 44_100, channels: int = 1, dtype: str = "int16", device_id: int | None = None):
+        super().__init__()
+        self.samplerate = samplerate
+        self.channels = channels
+        self.dtype = dtype
+        self.device_id = device_id
+        self._recording_thread: Optional[RecordingThread] = None
+        self._current_temp_file: Optional[Path] = None
+
+    def set_device(self, device_id: int | None, samplerate: int, channels: int, dtype: str) -> None:
+        self.device_id = device_id
+        self.samplerate = samplerate
+        self.channels = channels
+        self.dtype = dtype
+
+    def start_recording(self) -> bool:
+        if self._recording_thread and self._recording_thread.isRunning():
+            logger.warning("Attempted to start recording while already recording")
+            return False
+
+        try:
+            path = temp_file_manager.create_temp_wav()
+            self._current_temp_file = path
+
+            self._recording_thread = RecordingThread(
+                output_path=path,
+                samplerate=self.samplerate,
+                channels=self.channels,
+                dtype=self.dtype,
+                device=self.device_id,
+            )
+            self._recording_thread.recording_error.connect(self._on_recording_error)
+            self._recording_thread.recording_finished.connect(self._on_recording_finished)
+            self._recording_thread.start()
+
+            self.recording_started.emit()
+            logger.info("Recording started")
+            return True
+        except Exception as e:
+            logger.exception("Failed to start recording")
+            self.audio_error.emit(f"Failed to start recording: {e}")
+            return False
+
+    @Slot(str)
+    def _on_recording_error(self, error: str) -> None:
+        logger.error(f"Recording error: {error}")
+        self.audio_error.emit(error)
+
+    @Slot(str)
+    def _on_recording_finished(self, audio_file: str) -> None:
+        try:
+            self._current_temp_file = None
+            logger.info(f"Audio saved to: {audio_file}")
+            self.audio_ready.emit(str(audio_file))
+        except Exception as e:
+            logger.exception("Unexpected error finishing audio")
+            self.audio_error.emit(f"Failed to finalize audio: {e}")
+
+    def stop_recording(self) -> None:
+        if self._recording_thread and self._recording_thread.isRunning():
+            self._recording_thread.stop()
+            logger.info("Recording stop requested")
+            self.recording_stopped.emit()
+
+    def get_latest_samples(self) -> Optional[np.ndarray]:
+        if self._recording_thread and self._recording_thread.isRunning():
+            return self._recording_thread.get_latest_samples()
+        return None
+
+    def cleanup(self) -> None:
+        import time as _time
+        _t = _time.perf_counter()
+
+        if self._recording_thread and self._recording_thread.isRunning():
+            self._recording_thread.stop()
+            logger.info(f"[SHUTDOWN]   AM recording_thread.stop(): {_time.perf_counter() - _t:.3f}s")
+
+            _t2 = _time.perf_counter()
+            if not self._recording_thread.wait_for_cleanup(timeout_ms=3000):
+                logger.warning("Recording thread cleanup taking longer than expected, waiting...")
+                self._recording_thread.wait(2000)
+            logger.info(f"[SHUTDOWN]   AM wait_for_cleanup: {_time.perf_counter() - _t2:.3f}s")
+
+            if self._recording_thread.isRunning():
+                logger.error("Recording thread did not stop gracefully, forcing termination")
+                self._recording_thread.terminate()
+                self._recording_thread.wait(1000)
+        else:
+            logger.info(f"[SHUTDOWN]   AM no recording thread running: {_time.perf_counter() - _t:.3f}s")
+
+        if self._current_temp_file:
+            temp_file_manager.release(self._current_temp_file)
+            self._current_temp_file = None
+
+        logger.debug("AudioManager cleanup complete")

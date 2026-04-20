@@ -1,31 +1,35 @@
-from threading import Event
+from __future__ import annotations
+
 from PySide6.QtCore import QThread, Signal
 
-from core.monitoring.system_metrics import SystemMonitor
+from core.monitoring.system_metrics import SystemMetrics, SystemMonitor
 
 
 class MetricsCollector(QThread):
 
     metrics_updated = Signal(object)
 
-    def __init__(self, interval: int = 400):
+    def __init__(self, interval_ms: int = 1000):
         super().__init__()
-        self.interval = interval
-        self._stop_event = Event()
-        self.monitor = SystemMonitor()
+        self._interval_ms = interval_ms
+        self._running = False
+        self._monitor: SystemMonitor | None = None
 
-    def run(self):
-        while not self._stop_event.is_set():
-            try:
-                metrics = self.monitor.collect_all_metrics()
-                self.metrics_updated.emit(metrics)
-            except Exception as e:
-                print(f"Error collecting metrics: {e}")
+    @property
+    def has_nvidia(self) -> bool:
+        return self._monitor.has_nvidia if self._monitor else False
 
-            self.msleep(self.interval)
+    def run(self) -> None:
+        # Initialize on worker thread so pynvml is bound to this thread.
+        self._monitor = SystemMonitor()
+        self._running = True
+        while self._running:
+            metrics = self._monitor.collect_all_metrics()
+            self.metrics_updated.emit(metrics)
+            self.msleep(self._interval_ms)
 
-    def stop(self):
-        self._stop_event.set()
-
-    def cleanup(self):
-        self.monitor.shutdown()
+    def stop(self) -> None:
+        self._running = False
+        self.wait(2000)
+        if self._monitor:
+            self._monitor.shutdown()

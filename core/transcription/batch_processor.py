@@ -1,45 +1,89 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Dict, Any
 from threading import Event
 
-from PySide6.QtCore import QThread, Signal, QElapsedTimer
-import whisper_s2t
+from PySide6.QtCore import QElapsedTimer, QThread, Signal
 
-from config.settings import TranscriptionSettings
+from core.logging_config import get_logger
+from core.output.writers import SegmentData, TranscriptionResult, write_output
+
+logger = get_logger(__name__)
+
+
+def _is_oom_error(exc: Exception) -> bool:
+    try:
+        import torch
+        if isinstance(exc, torch.cuda.OutOfMemoryError):
+            return True
+    except (ImportError, AttributeError):
+        pass
+    if isinstance(exc, RuntimeError):
+        msg = str(exc).lower()
+        if "out of memory" in msg or ("cuda" in msg and "alloc" in msg):
+            return True
+    return False
+
+
+def _deduplicated_output_path(output_dir: Path, stem: str, suffix: str,
+                              seen: dict[str, int]) -> Path:
+    key = stem.lower()
+    if key in seen:
+        seen[key] += 1
+        return output_dir / f"{stem}_{seen[key]}{suffix}"
+    else:
+        seen[key] = 0
+        return output_dir / f"{stem}{suffix}"
+
+
+def _segments_from_whisper_s2t(raw_segments: list) -> list[SegmentData]:
+    segments: list[SegmentData] = []
+    for s in raw_segments:
+        if not isinstance(s, dict):
+            continue
+        text = s.get("text", "")
+        start = float(s.get("start_time", 0.0) or 0.0)
+        end = float(s.get("end_time", start) or start)
+        segments.append(SegmentData(start=start, end=end, text=text))
+    return segments
+
 
 class BatchProcessor(QThread):
+
     progress = Signal(int, int, str)
     finished = Signal(str)
     error = Signal(str)
 
-    def __init__(self, files: List[Path], settings: TranscriptionSettings,
-                 model_info: Dict[str, Any], model_manager):
+    def __init__(
+        self,
+        files: list[Path],
+        model,
+        output_format: str,
+        output_directory: str | None,
+        batch_size: int,
+        language: str,
+        task_mode: str,
+    ):
         super().__init__()
-        self.files = files
-        self.settings = settings
-        self.model_info = model_info
-        self.model_manager = model_manager
+        self.files = [Path(f) for f in files]
+        self.model = model
+        self.output_format = output_format
+        self.output_directory = output_directory
+        self.batch_size = batch_size if batch_size and batch_size > 0 else 8
+        self.language = language or "en"
+        self.task_mode = task_mode or "transcribe"
         self.stop_requested = Event()
 
-    def request_stop(self):
+    def request_stop(self) -> None:
         self.stop_requested.set()
 
-    def run(self):
+    def run(self) -> None:
         timer = QElapsedTimer()
         timer.start()
 
+        seen_names: dict[str, int] = {}
+
         try:
-            model = self.model_manager.get_or_load_model(
-                self.settings.model_key,
-                self.settings.device,
-                self.settings.beam_size,
-                self.model_info['precision']
-            )
-
-            if not model:
-                self.error.emit("Failed to load model")
-                return
-
             total_files = len(self.files)
 
             for idx, audio_file in enumerate(self.files, 1):
@@ -49,28 +93,60 @@ class BatchProcessor(QThread):
                 self.progress.emit(idx, total_files, f"Processing {audio_file.name}")
 
                 try:
-                    out = model.transcribe_with_vad(
+                    out = self.model.transcribe_with_vad(
                         [str(audio_file)],
-                        lang_codes=[self.settings.language],
-                        tasks=[self.settings.task_mode],
+                        lang_codes=[self.language],
+                        tasks=[self.task_mode],
                         initial_prompts=[None],
-                        batch_size=self.settings.batch_size
+                        batch_size=self.batch_size,
                     )
 
-                    output_file = audio_file.with_suffix(f'.{self.settings.output_format}')
-                    whisper_s2t.write_outputs(
-                        out,
-                        format=self.settings.output_format,
-                        op_files=[str(output_file)]
+                    if self.stop_requested.is_set():
+                        break
+
+                    raw_segments = out[0] if out else []
+                    segments = _segments_from_whisper_s2t(raw_segments)
+                    text = "\n".join(seg.text.lstrip() for seg in segments if seg.text)
+
+                    duration = segments[-1].end if segments else None
+                    result = TranscriptionResult(
+                        text=text,
+                        segments=segments,
+                        language=self.language,
+                        duration=duration,
+                        source_file=audio_file,
                     )
 
-                    self.progress.emit(idx, total_files, f"Completed {audio_file.name}")
+                    out_suffix = f".{self.output_format}"
+                    if self.output_directory:
+                        out_dir = Path(self.output_directory)
+                        out_dir.mkdir(parents=True, exist_ok=True)
+                        output_file = _deduplicated_output_path(
+                            out_dir, audio_file.stem, out_suffix, seen_names
+                        )
+                    else:
+                        output_file = audio_file.with_suffix(out_suffix)
+
+                    write_output(result, output_file, self.output_format)
+
+                    self.progress.emit(
+                        idx, total_files, f"Completed {audio_file.name}"
+                    )
 
                 except Exception as e:
+                    if _is_oom_error(e):
+                        self.error.emit(
+                            f"GPU out of memory processing {audio_file.name}: {e}\n"
+                            "Stopping batch. Try a smaller model or reduce batch size."
+                        )
+                        logger.error("OOM error, stopping batch: %s", e)
+                        break
                     self.error.emit(f"Error processing {audio_file.name}: {e}")
+                    logger.error("Error processing %s: %s", audio_file.name, e)
 
         except Exception as e:
             self.error.emit(f"Processing failed: {e}")
+            logger.exception("Batch processing failed")
 
         finally:
             elapsed = timer.elapsed() / 1000.0
