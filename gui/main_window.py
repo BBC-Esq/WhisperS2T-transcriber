@@ -1131,7 +1131,13 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def _on_batch_stop(self) -> None:
-        self.controller.stop_batch_processing()
+        # The file panel's Stop button is enabled in both single-file and
+        # multi-file modes; route to whichever cancellation path is live.
+        if self.controller.is_batch_processing():
+            self.controller.stop_batch_processing()
+        elif self.controller.is_transcribing():
+            self.controller.cancel_transcription()
+            self.file_panel.on_single_file_done()
         self.record_button.setText("Click to Record")
         self.record_button.set_state(WaveformButton.IDLE)
         self.record_button.setEnabled(True)
