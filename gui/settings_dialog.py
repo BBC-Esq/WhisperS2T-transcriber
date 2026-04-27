@@ -522,6 +522,9 @@ class SettingsDialog(QDialog):
                 self.server_mode_toggle.blockSignals(True)
                 self.server_mode_toggle.setChecked(False)
                 self.server_mode_toggle.blockSignals(False)
+                self._apply_server_mode_lock()
+                self._check_for_changes()
+                return
 
         if self._model_settings_changed() or beam_changed:
             model = self.model_dropdown.currentText()
