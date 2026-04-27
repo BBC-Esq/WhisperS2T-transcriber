@@ -136,6 +136,7 @@ class FilePanelWindow(QWidget):
     def __init__(self, parent: QWidget | None = None, width: int = 280):
         super().__init__(parent)
 
+        self._main_window_ref: QWidget | None = None
         self._docked = True
         self._internal_move = False
         self._internal_move_count = 0
@@ -440,7 +441,7 @@ class FilePanelWindow(QWidget):
 
             task_mode = "transcribe"
             try:
-                main_win = self.parent()
+                main_win = self._main_window_ref
                 if main_win and hasattr(main_win, "task_mode"):
                     task_mode = main_win.task_mode
             except Exception:
