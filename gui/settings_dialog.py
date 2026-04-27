@@ -283,6 +283,7 @@ class SettingsDialog(QDialog):
         self.beam_size_spin.valueChanged.connect(self._check_for_changes)
         self.include_timestamps_cb.toggled.connect(self._check_for_changes)
         self.server_mode_toggle.toggled.connect(self._check_for_changes)
+        self.server_mode_toggle.toggled.connect(self._apply_server_mode_lock)
         self.server_port_spin.valueChanged.connect(self._check_for_changes)
 
     def _populate_from_settings(self) -> None:
@@ -438,7 +439,9 @@ class SettingsDialog(QDialog):
         return current != self.current_server_settings
 
     def _apply_server_mode_lock(self) -> None:
-        server_on = bool(self.current_server_settings.get("server_mode_enabled", False))
+        # Read live state from the toggle, not the initial dict, so the
+        # lock follows the user's in-dialog flips.
+        server_on = self.server_mode_toggle.isChecked()
         locked_widgets = [
             self.model_dropdown,
             self.device_dropdown,
