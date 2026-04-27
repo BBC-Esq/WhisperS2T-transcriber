@@ -92,7 +92,7 @@ WHISPER_LANGUAGES = OrderedDict([
 
 SUPPORTED_AUDIO_EXTENSIONS = [
     ".aac", ".amr", ".asf", ".avi", ".flac", ".m4a",
-    ".mkv", ".mp3", ".mp4", ".wav", ".webm", ".wma"
+    ".mkv", ".mp3", ".mp4", ".ogg", ".wav", ".webm", ".wma",
 ]
 
 OUTPUT_FORMATS = ["txt", "vtt", "srt", "json"]
