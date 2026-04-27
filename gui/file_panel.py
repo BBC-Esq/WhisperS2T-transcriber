@@ -137,6 +137,7 @@ class FilePanelWindow(QWidget):
         super().__init__(parent)
 
         self._main_window_ref: QWidget | None = None
+        self._batch_had_errors = False
         self._docked = True
         self._internal_move = False
         self._internal_move_count = 0
@@ -411,6 +412,7 @@ class FilePanelWindow(QWidget):
 
         if self._is_single_mode():
             self._is_processing = True
+            self._batch_had_errors = False
             self._start_btn.setEnabled(False)
             self._stop_btn.setEnabled(True)
             self._status_label.setText("Transcribing...")
@@ -435,6 +437,7 @@ class FilePanelWindow(QWidget):
                 return
 
             self._is_processing = True
+            self._batch_had_errors = False
             self._start_btn.setEnabled(False)
             self._stop_btn.setEnabled(True)
             self._status_label.setText("Starting...")
@@ -462,10 +465,14 @@ class FilePanelWindow(QWidget):
         self._is_processing = False
         self._start_btn.setEnabled(True)
         self._stop_btn.setEnabled(False)
-        self._status_label.setText(message)
+        if self._batch_had_errors:
+            self._status_label.setText(f"Completed with errors. {message}")
+        else:
+            self._status_label.setText(message)
 
     @Slot(str)
     def on_batch_error(self, message: str) -> None:
+        self._batch_had_errors = True
         self._status_label.setText(f"Error: {message}")
 
     def on_single_file_done(self) -> None:
