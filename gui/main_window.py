@@ -1026,6 +1026,14 @@ class MainWindow(QMainWindow):
         else:
             if self.controller.start_recording():
                 self.is_recording = True
+                # Mic dictation always targets the clipboard; clear any stale
+                # pending output state left over from a file-panel "save"
+                # transcription so we don't overwrite that file or skip the
+                # clipboard.
+                self._pending_output_mode = "clipboard"
+                self._pending_output_format = "txt"
+                self._pending_output_dir = ""
+                self._pending_source_file = ""
                 self.record_button.setText("Recording...")
                 self.record_button.set_state(WaveformButton.RECORDING)
                 self._sample_timer.start()
