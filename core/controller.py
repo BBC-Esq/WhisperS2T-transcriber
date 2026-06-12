@@ -215,7 +215,13 @@ class TranscriberController(QObject):
 
     @Slot(str)
     def _on_batch_completed(self, message: str) -> None:
-        self._batch_processor = None
+        # Keep the reference here: this slot is wired to the processor's custom
+        # `finished` signal, which is emitted inside run() before it returns.
+        # Nulling the last reference now could delete a still-running QThread
+        # ("QThread destroyed while running"). The next start_batch_processing()
+        # reassigns the field once run() has provably returned, and
+        # is_batch_processing() guards on isRunning(), so a retained finished
+        # thread reports not-busy.
         self.batch_completed.emit(message)
 
     @Slot(str)
