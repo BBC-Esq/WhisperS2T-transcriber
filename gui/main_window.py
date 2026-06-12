@@ -1165,6 +1165,21 @@ class MainWindow(QMainWindow):
             )
             return
 
+        if (
+            self._server_mode_enabled
+            or self.is_recording
+            or self.controller.is_transcribing()
+            or self.controller.is_batch_processing()
+            or not self.record_button.isEnabled()
+        ):
+            logger.info("Ignoring dropped file; app is busy")
+            QMessageBox.information(
+                self, "Busy",
+                "A transcription, batch job, or recording is already in "
+                "progress. Wait for it to finish before dropping a file."
+            )
+            return
+
         self._pending_output_mode = "clipboard"
         self._pending_output_format = "txt"
         self._pending_output_dir = ""
