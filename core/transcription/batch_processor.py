@@ -25,15 +25,23 @@ def _is_oom_error(exc: Exception) -> bool:
     return False
 
 
-def _deduplicated_output_path(output_dir: Path, stem: str, suffix: str,
-                              seen: dict[str, int]) -> Path:
-    key = stem.lower()
-    if key in seen:
-        seen[key] += 1
-        return output_dir / f"{stem}_{seen[key]}{suffix}"
-    else:
-        seen[key] = 0
-        return output_dir / f"{stem}{suffix}"
+def _unique_output_path(output_file: Path, seen: set[str]) -> Path:
+    """Avoid collisions when multiple inputs map to the same output path
+    (e.g. a.mp3 and a.wav both -> a.txt in the same folder). Within-batch
+    only; a pre-existing file on disk is still overwritten, as before."""
+    key = str(output_file).lower()
+    if key not in seen:
+        seen.add(key)
+        return output_file
+    stem, suffix, parent = output_file.stem, output_file.suffix, output_file.parent
+    n = 1
+    while True:
+        candidate = parent / f"{stem}_{n}{suffix}"
+        ckey = str(candidate).lower()
+        if ckey not in seen:
+            seen.add(ckey)
+            return candidate
+        n += 1
 
 
 def _segments_from_whisper_s2t(raw_segments: list) -> list[SegmentData]:
@@ -81,7 +89,7 @@ class BatchProcessor(QThread):
         timer = QElapsedTimer()
         timer.start()
 
-        seen_names: dict[str, int] = {}
+        seen_paths: set[str] = set()
 
         try:
             total_files = len(self.files)
@@ -121,11 +129,10 @@ class BatchProcessor(QThread):
                     if self.output_directory:
                         out_dir = Path(self.output_directory)
                         out_dir.mkdir(parents=True, exist_ok=True)
-                        output_file = _deduplicated_output_path(
-                            out_dir, audio_file.stem, out_suffix, seen_names
-                        )
+                        base_output = out_dir / f"{audio_file.stem}{out_suffix}"
                     else:
-                        output_file = audio_file.with_suffix(out_suffix)
+                        base_output = audio_file.with_suffix(out_suffix)
+                    output_file = _unique_output_path(base_output, seen_paths)
 
                     write_output(result, output_file, self.output_format)
 
