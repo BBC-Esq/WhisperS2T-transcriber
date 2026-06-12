@@ -158,7 +158,7 @@ class ConfigManager:
         return value
 
     def _validate_beam_size(self, value: Any) -> int:
-        if isinstance(value, int) and 1 <= value <= 10:
+        if isinstance(value, int) and 1 <= value <= 5:
             return value
         return self.DEFAULT_CONFIG["beam_size"]
 
