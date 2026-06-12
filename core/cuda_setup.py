@@ -82,10 +82,11 @@ def set_cuda_paths() -> bool:
     os.environ[env_var] = new_value
 
     cuda_runtime_path = nvidia_base / "cuda_runtime"
-    if cuda_runtime_path.exists():
-        current_cuda = os.environ.get("CUDA_PATH", "")
-        new_cuda = os.pathsep.join([str(cuda_runtime_path)] + ([current_cuda] if current_cuda else []))
-        os.environ["CUDA_PATH"] = new_cuda
+    if cuda_runtime_path.exists() and not os.environ.get("CUDA_PATH"):
+        # CUDA_PATH is conventionally a single directory, not a list. Only set
+        # it when absent so we don't clobber or malform a user's existing one;
+        # DLL resolution already works via PATH + add_dll_directory above.
+        os.environ["CUDA_PATH"] = str(cuda_runtime_path)
 
     logger.info("CUDA paths configured successfully")
     return True
