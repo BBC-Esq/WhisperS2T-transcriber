@@ -475,11 +475,11 @@ class FilePanelWindow(QWidget):
         self._batch_had_errors = True
         self._status_label.setText(f"Error: {message}")
 
-    def on_single_file_done(self) -> None:
+    def on_single_file_done(self, status: str = "Done") -> None:
         self._is_processing = False
         self._start_btn.setEnabled(True)
         self._stop_btn.setEnabled(False)
-        self._status_label.setText("Done")
+        self._status_label.setText(status)
 
     def _stop_animation(self) -> None:
         if self._animation:
