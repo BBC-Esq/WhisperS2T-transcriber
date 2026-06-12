@@ -309,7 +309,20 @@ class ModelManager(QObject):
         holder: dict = {}
         done_event = threading.Event()
 
-        def _on_loaded(m, *_args):
+        def _on_loaded(m, name, prec, dev, _v):
+            # Store as the one resident model so repeat server requests reuse it
+            # and we never hold two models at once. Evicts the previous model
+            # (including the GUI-loaded one) under the mutex.
+            with QMutexLocker(self._model_mutex):
+                if self._model is not None and self._model is not m:
+                    _release_model(self._model)
+                self._model = m
+                self._model_version = _v
+            self._current_settings = {
+                "model_name": name,
+                "precision": prec,
+                "device_type": dev,
+            }
             holder["model"] = m
             done_event.set()
 
@@ -326,7 +339,14 @@ class ModelManager(QObject):
         runnable.signals.download_cancelled.connect(_on_cancelled)
         self._thread_pool.start(runnable)
 
-        done_event.wait()
+        # Safety valve: a load should never block the server's queue worker
+        # forever. 600s accommodates a first-time download while still breaking
+        # a genuine wedge; on timeout, signal the runnable to abort.
+        if not done_event.wait(timeout=600):
+            cancel_event.set()
+            raise ModelLoadError(
+                f"Model load timed out for '{model_name}' ({precision}, {device})"
+            )
         if "error" in holder:
             raise ModelLoadError(holder["error"])
         return holder.get("model")
