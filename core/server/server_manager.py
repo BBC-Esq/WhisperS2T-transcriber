@@ -67,8 +67,21 @@ class ServerManager(QObject):
     def _run_server(self) -> None:
         try:
             self._server.run()
+        except SystemExit as e:
+            # uvicorn calls sys.exit(1) when it cannot bind the port (e.g. the
+            # port is already in use). SystemExit is a BaseException, so the old
+            # "except Exception" missed it: the thread died silently while the
+            # GUI still showed "server: on".
+            logger.error(
+                f"Server failed to start on port {self._port} (exit code {e.code})"
+            )
+            self.server_error.emit(
+                f"Could not start the server on port {self._port}. "
+                f"The port may already be in use — try a different port."
+            )
         except Exception as e:
             logger.error(f"Server thread error: {e}", exc_info=True)
+            self.server_error.emit(f"Server error: {e}")
 
     def stop_server(self) -> None:
         was_running = self.is_running()
