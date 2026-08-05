@@ -112,6 +112,14 @@ class SettingsDialog(QDialog):
         self.precision_dropdown = QComboBox()
         model_form.addRow("Precision", self.precision_dropdown)
 
+        self.beam_size_spin = QSpinBox()
+        self.beam_size_spin.setRange(1, 5)
+        self.beam_size_spin.setToolTip(
+            "Number of beams for decoding (higher = more accurate, slower). "
+            "Changing this reloads the model."
+        )
+        model_form.addRow("Beam Size", self.beam_size_spin)
+
         self.model_desc_label = QLabel("")
         self.model_desc_label.setWordWrap(True)
         self.model_desc_label.setStyleSheet("color: #aaaaaa; font-size: 11px;")
@@ -140,21 +148,6 @@ class SettingsDialog(QDialog):
         # --- Right column ---
         right_column = QVBoxLayout()
         right_column.setSpacing(12)
-
-        whisper_group = QGroupBox("WhisperS2T Settings")
-        whisper_form = QFormLayout(whisper_group)
-        whisper_form.setHorizontalSpacing(12)
-        whisper_form.setVerticalSpacing(10)
-
-        self.beam_size_spin = QSpinBox()
-        self.beam_size_spin.setRange(1, 5)
-        self.beam_size_spin.setToolTip(
-            "Number of beams for decoding (higher = more accurate, slower). "
-            "Changing this reloads the model."
-        )
-        whisper_form.addRow("Beam Size", self.beam_size_spin)
-
-        right_column.addWidget(whisper_group)
 
         server_group = QGroupBox("Server Mode")
         server_vbox = QVBoxLayout(server_group)
