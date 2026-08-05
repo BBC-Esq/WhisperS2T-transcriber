@@ -499,7 +499,7 @@ response <span class="op">=</span> requests.<span class="fn">post</span>(
     <tr><th>Parameter</th><th>Type</th><th>Description</th><th>Values</th></tr>
   </thead>
   <tbody>
-    <tr><td><code>model</code></td><td>string</td><td>Display name of the Whisper checkpoint</td><td><code>"Whisper large-v3"</code>, <code>"Whisper large-v3 turbo"</code>, <code>"Whisper medium"</code>, <code>"Whisper small.en"</code>, <code>"Distil Whisper large-v3"</code>, etc.</td></tr>
+    <tr><td><code>model</code></td><td>string</td><td>Display name of the Whisper checkpoint</td><td><code>"Whisper large-v3"</code>, <code>"Whisper large-v3 turbo"</code>, <code>"Whisper medium"</code>, <code>"Whisper small.en"</code>, <code>"Distil Whisper large-v3.5"</code>, <code>"Distil Whisper large-v3"</code>, etc.</td></tr>
     <tr><td><code>precision</code></td><td>string</td><td>CTranslate2 <code>compute_type</code>. Picks which pre-converted variant of the model to load.</td><td><code>"float32"</code>, <code>"float16"</code>, <code>"bfloat16"</code></td></tr>
     <tr><td><code>device</code></td><td>string</td><td>CPU or GPU</td><td><code>"cuda"</code>, <code>"cpu"</code></td></tr>
     <tr><td><code>language</code></td><td>string</td><td>ISO 639-1 language code. <code>.en</code>-suffixed models only speak English.</td><td><code>"en"</code>, <code>"fr"</code>, <code>"es"</code>, <code>"de"</code>, <code>"zh"</code>, &hellip; (99 languages)</td></tr>
@@ -507,6 +507,7 @@ response <span class="op">=</span> requests.<span class="fn">post</span>(
     <tr><td><code>beam_size</code></td><td>integer</td><td>Number of beams for decoding. Higher = more accurate, slower. <strong>Model reload required</strong> &mdash; this is baked into the loaded model.</td><td><code>1</code>&ndash;<code>5</code> (default <code>1</code>)</td></tr>
     <tr><td><code>batch_size</code></td><td>integer</td><td>Chunk batch size for VAD processing. Not a file-count.</td><td><code>1</code>&ndash;<code>200</code> (default <code>16</code>)</td></tr>
     <tr><td><code>include_timestamps</code></td><td>boolean</td><td>Return segment start/end times in the <code>segments</code> array. When false, <code>segments</code> is <code>[]</code>.</td><td><code>"true"</code>, <code>"false"</code></td></tr>
+    <tr><td><code>output_format</code></td><td>string</td><td>Accepted for compatibility but has <strong>no effect on the API</strong> &mdash; responses are always JSON. See the note below.</td><td><code>"txt"</code>, <code>"srt"</code>, <code>"vtt"</code>, <code>"json"</code></td></tr>
     <tr><td><code>audio_format</code></td><td>string</td><td>Override input format auto-detection</td><td><code>"auto"</code>, <code>"file"</code>, <code>"numpy"</code>, <code>"tensor"</code>, <code>"pcm"</code></td></tr>
     <tr><td><code>sample_rate</code></td><td>integer</td><td>Sample rate of raw audio input (resampled to 16 kHz)</td><td>e.g. <code>"16000"</code>, <code>"22050"</code>, <code>"44100"</code>, <code>"48000"</code></td></tr>
     <tr><td><code>dtype</code></td><td>string</td><td>Data type for raw PCM input</td><td><code>"float32"</code>, <code>"float64"</code>, <code>"int16"</code>, <code>"int32"</code></td></tr>
@@ -516,6 +517,11 @@ response <span class="op">=</span> requests.<span class="fn">post</span>(
 <div class="callout info">
   <div class="tag">Note</div>
   WhisperS2T's VAD is always on (<code>transcribe_with_vad</code>). There's no <code>vad_filter</code>, <code>condition_on_previous_text</code>, <code>word_timestamps</code>, or <code>temperature</code> in the API &mdash; those aren't exposed by this backend.
+</div>
+
+<div class="callout warn">
+  <div class="tag">Important</div>
+  <code>output_format</code> only affects files written when transcribing through the GUI. The API <strong>always</strong> returns the same JSON structure regardless of what you pass, so setting it to <code>"srt"</code> will not give you subtitle text. Use <code>include_timestamps=true</code> and convert the <code>segments</code> array yourself &mdash; see <a href="#response">Response Format</a> for a ready-made SRT converter.
 </div>
 
 <h3>Example with Custom Settings</h3>
@@ -1059,7 +1065,7 @@ Every setting is optional. If omitted, the server uses the GUI-configured value.
 
 | Parameter          | Type    | Description                                           | Values                                                    |
 |--------------------|---------|-------------------------------------------------------|-----------------------------------------------------------|
-| model              | string  | Display name of the Whisper checkpoint                | "Whisper large-v3", "Whisper medium.en", etc.            |
+| model              | string  | Display name of the Whisper checkpoint                | "Whisper large-v3", "Distil Whisper large-v3.5", "Whisper medium.en", etc. |
 | precision          | string  | CTranslate2 compute_type                              | "float32", "float16", "bfloat16"                          |
 | device             | string  | CPU or GPU                                            | "cuda", "cpu"                                             |
 | language           | string  | ISO 639-1 language code                               | "en", "fr", "es", "de", "zh", ... (99 languages)          |
@@ -1067,6 +1073,7 @@ Every setting is optional. If omitted, the server uses the GUI-configured value.
 | beam_size          | int     | Decoding beam width. Model reload required.           | 1-5 (default 1)                                           |
 | batch_size         | int     | Chunk batch size for VAD                              | 1-200 (default 16)                                        |
 | include_timestamps | bool    | Return segment times                                  | "true", "false"                                           |
+| output_format      | string  | Accepted but has NO effect on the API (always JSON)   | "txt", "srt", "vtt", "json"                               |
 | audio_format       | string  | Override input format auto-detection                  | "auto", "file", "numpy", "tensor", "pcm"                  |
 | sample_rate        | int     | Sample rate of raw audio input                        | "16000", "22050", "44100", "48000"                        |
 | dtype              | string  | Data type for raw PCM input                           | "float32", "float64", "int16", "int32"                    |
@@ -1074,6 +1081,8 @@ Every setting is optional. If omitted, the server uses the GUI-configured value.
 Note: WhisperS2T's VAD is always on. No vad_filter, condition_on_previous_text, word_timestamps, or temperature fields exist in this backend.
 
 Important: beam_size is applied at model load time. Changing it triggers a full model reload.
+
+Important: output_format only affects files written when transcribing through the GUI. The API always returns the same JSON structure regardless of what you pass, so setting it to "srt" will not give you subtitle text. Use include_timestamps=true and convert the segments array yourself (see section 6e for a ready-made SRT converter).
 
 ### Example with Custom Settings
 
