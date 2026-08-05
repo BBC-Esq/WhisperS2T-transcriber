@@ -26,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 SR = 16000
 
+MIN_BEAM_SIZE = 1
+MAX_BEAM_SIZE = 5
+MIN_BATCH_SIZE = 1
+MAX_BATCH_SIZE = 200
+
 
 class AppState:
     model_manager: Any = None
@@ -277,6 +282,10 @@ def _resolve_model_key(
     )
 
 
+def _clamp(value: int, low: int, high: int) -> int:
+    return max(low, min(high, value))
+
+
 def _build_settings(
     model_name: Optional[str],
     precision: Optional[str],
@@ -294,8 +303,16 @@ def _build_settings(
     settings = TranscriptionSettings(
         model_key=model_key,
         device=device or defaults.device,
-        beam_size=beam_size if beam_size is not None else defaults.beam_size,
-        batch_size=batch_size if batch_size is not None else defaults.batch_size,
+        beam_size=_clamp(
+            beam_size if beam_size is not None else defaults.beam_size,
+            MIN_BEAM_SIZE,
+            MAX_BEAM_SIZE,
+        ),
+        batch_size=_clamp(
+            batch_size if batch_size is not None else defaults.batch_size,
+            MIN_BATCH_SIZE,
+            MAX_BATCH_SIZE,
+        ),
         language=language or defaults.language,
         task_mode=task_mode or defaults.task_mode,
         include_timestamps=(
