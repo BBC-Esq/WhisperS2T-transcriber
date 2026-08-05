@@ -119,7 +119,7 @@ class SettingsDialog(QDialog):
 
         left_column.addWidget(model_group)
 
-        task_group = QGroupBox("Task & Language")
+        task_group = QGroupBox("Task-Language")
         task_form = QFormLayout(task_group)
         task_form.setHorizontalSpacing(12)
         task_form.setVerticalSpacing(10)
@@ -133,20 +133,6 @@ class SettingsDialog(QDialog):
         task_form.addRow("Language", self.language_dropdown)
 
         left_column.addWidget(task_group)
-
-        audio_group = QGroupBox("Audio Input")
-        audio_form = QFormLayout(audio_group)
-        audio_form.setHorizontalSpacing(12)
-        audio_form.setVerticalSpacing(10)
-
-        self.audio_device_dropdown = QComboBox()
-        self.audio_device_dropdown.addItem("System Default", None)
-        for dev in self._input_devices:
-            display = f"{dev['name']} ({dev['hostapi']})"
-            self.audio_device_dropdown.addItem(display, dev)
-        audio_form.addRow("Input Device", self.audio_device_dropdown)
-
-        left_column.addWidget(audio_group)
         left_column.addStretch(1)
 
         columns_layout.addLayout(left_column, 1)
@@ -167,20 +153,6 @@ class SettingsDialog(QDialog):
             "Changing this reloads the model."
         )
         whisper_form.addRow("Beam Size", self.beam_size_spin)
-
-        self.include_timestamps_cb = QCheckBox()
-        self.include_timestamps_cb.setToolTip(
-            "Include segment timestamps in file outputs (always enabled for SRT/VTT)."
-        )
-        whisper_form.addRow("Include Timestamps", self.include_timestamps_cb)
-
-        vad_note = QLabel(
-            "<qt>VAD (voice activity detection) is always on — it's baked into "
-            "WhisperS2T's <code>transcribe_with_vad</code> and can't be disabled.</qt>"
-        )
-        vad_note.setWordWrap(True)
-        vad_note.setStyleSheet("color: #aaaaaa; font-size: 11px;")
-        whisper_form.addRow("", vad_note)
 
         right_column.addWidget(whisper_group)
 
@@ -210,6 +182,13 @@ class SettingsDialog(QDialog):
         toggle_row.addStretch(1)
         server_vbox.addLayout(toggle_row)
 
+        self.include_timestamps_cb = QCheckBox("Include timestamps in API response")
+        self.include_timestamps_cb.setToolTip(
+            "Include per-segment start and end times in the JSON returned by "
+            "/transcribe. Does not affect local transcription or file output."
+        )
+        server_vbox.addWidget(self.include_timestamps_cb)
+
         server_hint = QLabel(
             "<qt>When On, an HTTP API is exposed at <code>http://0.0.0.0:&lt;port&gt;</code>. "
             "Endpoints: <code>/transcribe</code>, <code>/transcribe/raw</code>, "
@@ -220,6 +199,20 @@ class SettingsDialog(QDialog):
         server_vbox.addWidget(server_hint)
 
         right_column.addWidget(server_group)
+
+        audio_group = QGroupBox("Audio Input")
+        audio_form = QFormLayout(audio_group)
+        audio_form.setHorizontalSpacing(12)
+        audio_form.setVerticalSpacing(10)
+
+        self.audio_device_dropdown = QComboBox()
+        self.audio_device_dropdown.addItem("System Default", None)
+        for dev in self._input_devices:
+            display = f"{dev['name']} ({dev['hostapi']})"
+            self.audio_device_dropdown.addItem(display, dev)
+        audio_form.addRow("Input Device", self.audio_device_dropdown)
+
+        right_column.addWidget(audio_group)
 
         file_types_row = QHBoxLayout()
         file_types_row.addStretch(1)
@@ -450,7 +443,6 @@ class SettingsDialog(QDialog):
             self.task_dropdown,
             self.language_dropdown,
             self.beam_size_spin,
-            self.include_timestamps_cb,
         ]
         for w in locked_widgets:
             w.setEnabled(not server_on)
