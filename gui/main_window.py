@@ -956,7 +956,6 @@ class MainWindow(QMainWindow):
             batch_size=config_manager.get_value("batch_size", 16),
             language=self.language,
             task_mode=self.task_mode,
-            output_format=config_manager.get_value("output_format", "txt"),
             include_timestamps=bool(config_manager.get_value("include_timestamps", False)),
         )
         self.server_manager.start_server(port, self.controller.model_manager, default_settings)

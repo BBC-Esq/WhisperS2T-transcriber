@@ -281,7 +281,6 @@ def _build_settings(
     model_name: Optional[str],
     precision: Optional[str],
     device: Optional[str],
-    output_format: Optional[str],
     language: Optional[str],
     task_mode: Optional[str],
     beam_size: Optional[int],
@@ -299,7 +298,6 @@ def _build_settings(
         batch_size=batch_size if batch_size is not None else defaults.batch_size,
         language=language or defaults.language,
         task_mode=task_mode or defaults.task_mode,
-        output_format=output_format or defaults.output_format,
         include_timestamps=(
             include_timestamps
             if include_timestamps is not None
@@ -319,7 +317,6 @@ class RawTranscribeRequest(BaseModel):
     model: Optional[str] = None
     precision: Optional[str] = None
     device: Optional[str] = None
-    output_format: Optional[str] = None
     language: Optional[str] = None
     task_mode: Optional[str] = None
     beam_size: Optional[int] = None
@@ -412,7 +409,6 @@ def create_app() -> FastAPI:
         model: Optional[str] = Form(None),
         precision: Optional[str] = Form(None),
         device: Optional[str] = Form(None),
-        output_format: Optional[str] = Form(None),
         language: Optional[str] = Form(None),
         task_mode: Optional[str] = Form(None),
         beam_size: Optional[int] = Form(None),
@@ -441,7 +437,7 @@ def create_app() -> FastAPI:
 
         try:
             settings, model_info = _build_settings(
-                model, precision, device, output_format, language, task_mode,
+                model, precision, device, language, task_mode,
                 beam_size, batch_size, include_timestamps,
             )
         except ValueError as e:
@@ -492,7 +488,7 @@ def create_app() -> FastAPI:
         try:
             settings, model_info = _build_settings(
                 request.model, request.precision, request.device,
-                request.output_format, request.language, request.task_mode,
+                request.language, request.task_mode,
                 request.beam_size, request.batch_size, request.include_timestamps,
             )
         except ValueError as e:

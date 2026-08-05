@@ -13,7 +13,6 @@ class TranscriptionSettings:
     batch_size: int
     language: str
     task_mode: str
-    output_format: str
     include_timestamps: bool = False
     recursive: bool = False
     selected_extensions: List[str] = field(default_factory=list)
