@@ -671,7 +671,7 @@ srt_text <span class="op">=</span> <span class="fn">to_srt</span>(result[<span c
     <tr><td>Whisper large-v3 / large-v3 turbo</td><td>No</td><td>Yes</td><td>Multilingual; turbo is faster with small quality loss.</td></tr>
     <tr><td>Whisper medium / small / base / tiny</td><td>No</td><td>Yes</td><td>Multilingual; smaller = faster + less VRAM.</td></tr>
     <tr><td>Whisper medium.en / small.en / base.en / tiny.en</td><td>Yes</td><td>No</td><td>English-only; slightly better English accuracy than the multilingual version at the same size. Forces <code>language="en"</code>.</td></tr>
-    <tr><td>Distil Whisper large-v3 / medium.en / small.en</td><td>Varies</td><td>No</td><td>Distilled variants: faster, smaller, English-focused.</td></tr>
+    <tr><td>Distil Whisper large-v3.5 / large-v3 / medium.en / small.en</td><td>Varies</td><td>No</td><td>Distilled variants: faster, smaller, English-focused.</td></tr>
   </tbody>
 </table>
 
@@ -1144,7 +1144,7 @@ with open("lecture.mp3", "rb") as f:
 | Whisper large-v3 / large-v3 turbo            | No           | Yes         | Multilingual; turbo is faster                |
 | Whisper medium / small / base / tiny         | No           | Yes         | Multilingual; smaller = faster               |
 | Whisper medium.en / small.en / base.en / tiny.en | Yes     | No          | English-only; forces language="en"           |
-| Distil Whisper large-v3 / medium.en / small.en | Varies     | No          | Distilled variants: faster, English-focused  |
+| Distil Whisper large-v3.5 / large-v3 / medium.en / small.en | Varies | No | Distilled variants: faster, English-focused  |
 
 Important: .en models and all Distil variants DO NOT support translation. The server returns HTTP 400 if you request task_mode="translate" against one.
 
