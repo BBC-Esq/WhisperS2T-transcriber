@@ -28,7 +28,7 @@ gpu_libs = [
 ]
 
 libs = [
-    "ctranslate2==4.6.2",
+    "ctranslate2==4.8.1",
     "fastapi",
     "huggingface_hub",
     "psutil",
@@ -42,7 +42,7 @@ libs = [
     "sympy==1.13.3",
     "tqdm",
     "uvicorn",
-    "whisper-s2t-reborn~=1.6.1",
+    "whisper-s2t-reborn>=1.7.1,<2.0.0",
 ]
 
 
