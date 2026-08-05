@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import signal
+import subprocess
 import warnings
 
 
@@ -27,6 +28,16 @@ warnings.filterwarnings(
     category=UserWarning,
     message=r".*pkg_resources is deprecated as an API.*"
 )
+
+if sys.platform == "win32":
+    _original_popen_init = subprocess.Popen.__init__
+
+    def _popen_init_no_window(self, *args, **kwargs):
+        if not kwargs.get("creationflags") and kwargs.get("startupinfo") is None:
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        _original_popen_init(self, *args, **kwargs)
+
+    subprocess.Popen.__init__ = _popen_init_no_window
 
 from core.cuda_setup import setup_cuda_if_available
 _cuda_paths_configured = setup_cuda_if_available()
