@@ -29,6 +29,8 @@ class ModelMetadata:
             return False
         if model_name in DISTIL_MODELS:
             return False
+        if "turbo" in model_name:
+            return False
         return True
 
     @classmethod
@@ -75,5 +77,5 @@ class ModelMetadata:
         if model_name.endswith(".en"):
             return "English-only Whisper checkpoint."
         if "turbo" in model_name:
-            return "Whisper large-v3-turbo: fast multilingual with translation."
+            return "Whisper large-v3-turbo: fast multilingual transcription; cannot translate."
         return "Multilingual Whisper checkpoint."
