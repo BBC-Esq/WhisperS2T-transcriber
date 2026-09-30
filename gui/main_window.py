@@ -935,10 +935,15 @@ class MainWindow(QMainWindow):
         self._save_config("server_mode_enabled", enabled)
         self._save_config("server_port", self._server_port)
 
-        if enabled:
-            self._start_server_mode(self._server_port)
-        else:
+        if not enabled:
             self.server_manager.stop_server()
+            return
+
+        if self.server_manager.is_running():
+            if self.server_manager.port == self._server_port:
+                return
+            self.server_manager.stop_server()
+        self._start_server_mode(self._server_port)
 
     def _start_server_mode(self, port: int) -> None:
         model_info = ModelMetadata.get_model_info(

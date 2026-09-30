@@ -496,17 +496,23 @@ class SettingsDialog(QDialog):
             currently_on = bool(
                 self.current_server_settings.get("server_mode_enabled", False)
             )
-            if wants_server_on and not currently_on and self._is_busy_check():
+            current_port = int(self.current_server_settings.get("server_port", 8765))
+            port_changed = self.server_port_spin.value() != current_port
+            if wants_server_on and (not currently_on or port_changed) and self._is_busy_check():
                 from PySide6.QtWidgets import QMessageBox
                 QMessageBox.warning(
                     self,
                     "Busy",
                     "A transcription or batch job is currently running. "
-                    "Wait for it to finish before turning Server Mode on.",
+                    "Wait for it to finish before turning Server Mode on "
+                    "or changing its port.",
                 )
                 self.server_mode_toggle.blockSignals(True)
-                self.server_mode_toggle.setChecked(False)
+                self.server_mode_toggle.setChecked(currently_on)
                 self.server_mode_toggle.blockSignals(False)
+                self.server_port_spin.blockSignals(True)
+                self.server_port_spin.setValue(current_port)
+                self.server_port_spin.blockSignals(False)
                 self._apply_server_mode_lock()
                 self._check_for_changes()
                 return
