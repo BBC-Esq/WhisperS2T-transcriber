@@ -51,6 +51,10 @@ def set_app_state(*, model_manager, default_settings: TranscriptionSettings) -> 
     _state.transcription_active = False
 
 
+def set_default_settings(default_settings: TranscriptionSettings) -> None:
+    _state.default_settings = default_settings
+
+
 @dataclass
 class WorkItem:
     audio_path: Path

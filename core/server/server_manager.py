@@ -101,6 +101,12 @@ class ServerManager(QObject):
             logger.info("Server stopped")
             self.server_stopped.emit()
 
+    def update_default_settings(self, default_settings: TranscriptionSettings) -> None:
+        if not self.is_running():
+            return
+        from core.server.api_server import set_default_settings
+        set_default_settings(default_settings)
+
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
 

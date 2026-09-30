@@ -945,17 +945,12 @@ class MainWindow(QMainWindow):
             self.server_manager.stop_server()
         self._start_server_mode(self._server_port)
 
-    def _start_server_mode(self, port: int) -> None:
-        model_info = ModelMetadata.get_model_info(
-            self.loaded_model_settings.get("model_name", self.DEFAULTS["model"]),
-            self.loaded_model_settings.get("precision", self.DEFAULTS["precision"]),
-        )
-        model_key = (
-            f"{self.loaded_model_settings.get('model_name')} - "
-            f"{self.loaded_model_settings.get('precision')}"
-        )
-        default_settings = TranscriptionSettings(
-            model_key=model_key,
+    def _server_default_settings(self) -> TranscriptionSettings:
+        return TranscriptionSettings(
+            model_key=ModelMetadata.resolve_model_key(
+                self.loaded_model_settings.get("model_name", self.DEFAULTS["model"]),
+                self.loaded_model_settings.get("precision", self.DEFAULTS["precision"]),
+            ),
             device=self.loaded_model_settings.get("device_type", "cpu"),
             beam_size=self.beam_size,
             batch_size=config_manager.get_value("batch_size", 16),
@@ -963,7 +958,14 @@ class MainWindow(QMainWindow):
             task_mode=self.task_mode,
             include_timestamps=bool(config_manager.get_value("include_timestamps", False)),
         )
-        self.server_manager.start_server(port, self.controller.model_manager, default_settings)
+
+    def _refresh_server_defaults(self) -> None:
+        self.server_manager.update_default_settings(self._server_default_settings())
+
+    def _start_server_mode(self, port: int) -> None:
+        self.server_manager.start_server(
+            port, self.controller.model_manager, self._server_default_settings()
+        )
 
     @Slot(int)
     def _on_server_started(self, port: int) -> None:
@@ -1003,6 +1005,7 @@ class MainWindow(QMainWindow):
             self.language = "en"
             self._save_config("language", "en")
             self.controller.set_language("en")
+        self._refresh_server_defaults()
         self._show_current_model_status()
         self.download_progress_bar.setVisible(False)
         self.cancel_download_button.setVisible(False)
