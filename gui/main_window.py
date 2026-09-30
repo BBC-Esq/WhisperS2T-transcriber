@@ -924,6 +924,7 @@ class MainWindow(QMainWindow):
             self._save_config(key, value)
         if "beam_size" in settings:
             self.beam_size = int(settings["beam_size"])
+        self._refresh_server_defaults()
 
     def _on_file_types_changed(self, ext_checked: dict) -> None:
         self.file_panel.set_ext_checked(ext_checked)
