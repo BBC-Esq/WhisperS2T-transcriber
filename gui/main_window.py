@@ -199,6 +199,7 @@ class MainWindow(QMainWindow):
         self._toggleable_widgets: list[QWidget] = []
         self._model_is_loaded = False
         self._is_loading_model = False
+        self._panel_job_active = False
         self._download_total_bytes = 0
         self._server_mode_enabled = bool(config_manager.get_value("server_mode_enabled", False))
         self._server_port = int(config_manager.get_value("server_port", 8765))
@@ -901,7 +902,7 @@ class MainWindow(QMainWindow):
         self.cancel_download_button.setVisible(False)
         self.cancel_download_button.setEnabled(True)
         self._show_current_model_status()
-        self.file_panel.on_single_file_done()
+        self._finish_panel_job("Failed")
         if "model" in title.lower():
             QMessageBox.critical(self, title, message)
         else:
@@ -1064,7 +1065,28 @@ class MainWindow(QMainWindow):
         self.record_button.set_state(WaveformButton.IDLE)
         self.cancel_button.setEnabled(True)
         self.cancel_button.setVisible(False)
-        self.file_panel.on_single_file_done(status="Cancelled")
+        self._finish_panel_job("Cancelled")
+
+    def _finish_panel_job(self, status: str) -> None:
+        if self._panel_job_active:
+            self._panel_job_active = False
+            self.file_panel.on_single_file_done(status=status)
+
+    def _busy_message(self) -> str | None:
+        if self._server_mode_enabled:
+            return "Server Mode is on. Turn it off in Settings to transcribe here."
+        if (
+            self.is_recording
+            or self.controller.is_transcribing()
+            or self.controller.is_batch_processing()
+        ):
+            return (
+                "A transcription, batch job, or recording is already in "
+                "progress. Wait for it to finish first."
+            )
+        if not self.record_button.isEnabled():
+            return "The model is still loading. Wait for it to finish first."
+        return None
 
     def _is_supported_audio_file(self, path: str) -> bool:
         try:
@@ -1078,6 +1100,14 @@ class MainWindow(QMainWindow):
     def _on_file_panel_transcribe(self, file_path: str, batch_size: int,
                                    output_mode: str, output_format: str,
                                    output_dir: str) -> None:
+        busy = self._busy_message()
+        if busy:
+            logger.info("Ignoring file panel transcription; app is busy")
+            self.file_panel.on_single_file_done(status="Busy")
+            QMessageBox.information(self, "Busy", busy)
+            return
+
+        self._panel_job_active = True
         self._pending_output_mode = output_mode
         self._pending_output_format = output_format
         self._pending_output_dir = output_dir
@@ -1157,6 +1187,7 @@ class MainWindow(QMainWindow):
             self.controller.cancel_transcription()
             self.file_panel.mark_stopping("Cancelling...")
         else:
+            self._panel_job_active = False
             self.file_panel.on_single_file_done(status="Stopped")
 
     @Slot(str)
@@ -1174,19 +1205,10 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if (
-            self._server_mode_enabled
-            or self.is_recording
-            or self.controller.is_transcribing()
-            or self.controller.is_batch_processing()
-            or not self.record_button.isEnabled()
-        ):
+        busy = self._busy_message()
+        if busy:
             logger.info("Ignoring dropped file; app is busy")
-            QMessageBox.information(
-                self, "Busy",
-                "A transcription, batch job, or recording is already in "
-                "progress. Wait for it to finish before dropping a file."
-            )
+            QMessageBox.information(self, "Busy", busy)
             return
 
         self._pending_output_mode = "clipboard"
@@ -1271,7 +1293,7 @@ class MainWindow(QMainWindow):
             self.is_recording = False
             update_button_property(self.record_button, "recording", False)
 
-        self.file_panel.on_single_file_done()
+        self._finish_panel_job("Done")
 
     @Slot(bool)
     def set_widgets_enabled(self, enabled: bool) -> None:
