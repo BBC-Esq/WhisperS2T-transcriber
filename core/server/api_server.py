@@ -422,9 +422,6 @@ def create_app() -> FastAPI:
                 "name": info["name"],
                 "precision": info["precision"],
                 "repo_id": info["repo_id"],
-                "optimal_batch_size": info.get("optimal_batch_size"),
-                "avg_vram_usage": info.get("avg_vram_usage"),
-                "tokens_per_second": info.get("tokens_per_second"),
                 "supports_translation": ModelMetadata.supports_translation(
                     info["name"]
                 ),

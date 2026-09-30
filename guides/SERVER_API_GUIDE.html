@@ -756,18 +756,12 @@ models <span class="op">=</span> r.<span class="fn">json</span>()
         <span class="str">"name"</span>: <span class="str">"Whisper large-v3"</span>,
         <span class="str">"precision"</span>: <span class="str">"float16"</span>,
         <span class="str">"repo_id"</span>: <span class="str">"ctranslate2-4you/whisper-large-v3-ct2-float16"</span>,
-        <span class="str">"optimal_batch_size"</span>: <span class="num">3</span>,
-        <span class="str">"avg_vram_usage"</span>: <span class="str">"3.3 GB"</span>,
-        <span class="str">"tokens_per_second"</span>: <span class="num">100</span>,
         <span class="str">"supports_translation"</span>: <span class="kw">true</span>
     },
     <span class="str">"Distil Whisper medium.en - float16"</span>: {
         <span class="str">"name"</span>: <span class="str">"Distil Whisper medium.en"</span>,
         <span class="str">"precision"</span>: <span class="str">"float16"</span>,
         <span class="str">"repo_id"</span>: <span class="str">"ctranslate2-4you/distil-whisper-medium.en-ct2-float16"</span>,
-        <span class="str">"optimal_batch_size"</span>: <span class="num">4</span>,
-        <span class="str">"avg_vram_usage"</span>: <span class="str">"3.0 GB"</span>,
-        <span class="str">"tokens_per_second"</span>: <span class="num">160</span>,
         <span class="str">"supports_translation"</span>: <span class="kw">false</span>
     }
     <span class="cmt">// ... one entry per (model, precision) combination (~42 total)</span>
@@ -781,9 +775,6 @@ models <span class="op">=</span> r.<span class="fn">json</span>()
     <tr><td><code>name</code></td><td>string</td><td>Display name (use as the <code>model</code> parameter on <code>/transcribe</code>).</td></tr>
     <tr><td><code>precision</code></td><td>string</td><td>CTranslate2 compute type for this entry.</td></tr>
     <tr><td><code>repo_id</code></td><td>string</td><td>HuggingFace repo the model is loaded from.</td></tr>
-    <tr><td><code>optimal_batch_size</code></td><td>int</td><td>Recommended starting point for <code>batch_size</code>.</td></tr>
-    <tr><td><code>avg_vram_usage</code></td><td>string</td><td>Approximate VRAM needed (human-readable).</td></tr>
-    <tr><td><code>tokens_per_second</code></td><td>int</td><td>Rough throughput benchmark on modern GPUs.</td></tr>
     <tr><td><code>supports_translation</code></td><td>bool</td><td><code>false</code> for <code>.en</code> models, Distil variants and large-v3 turbo.</td></tr>
   </tbody>
 </table>
@@ -794,7 +785,7 @@ models <span class="op">=</span> r.<span class="fn">json</span>()
 
 <span class="kw">for</span> key, info <span class="kw">in</span> models.<span class="fn">items</span>():
     <span class="kw">if</span> info[<span class="str">"supports_translation"</span>]:
-        <span class="fn">print</span>(<span class="str">f"</span>{key}<span class="str">  &mdash;  VRAM: </span>{info[<span class="str">'avg_vram_usage'</span>]}<span class="str">"</span>)</code></pre>
+        <span class="fn">print</span>(key)</code></pre>
 </section>
 
 <section id="queuing">
@@ -1172,8 +1163,7 @@ status = requests.get("http://127.0.0.1:8765/status").json()
 \`\`\`python
 models = requests.get("http://127.0.0.1:8765/models").json()
 # keyed by "<Model> - <precision>", each entry has:
-#   name, precision, repo_id, optimal_batch_size, avg_vram_usage,
-#   tokens_per_second, supports_translation
+#   name, precision, repo_id, supports_translation
 \`\`\`
 
 ## 9. Request Queuing
