@@ -5,7 +5,7 @@ import threading
 import uuid
 from typing import Optional
 
-from PySide6.QtCore import QMutex, QMutexLocker, QObject, QRunnable, QThreadPool, Signal
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, QRunnable, QThreadPool, Qt, Signal
 
 from core.exceptions import ModelLoadError
 from core.logging_config import get_logger
@@ -252,6 +252,18 @@ class ModelManager(QObject):
         self._thread_pool = QThreadPool.globalInstance()
         self._current_settings: dict = {}
         self._cancel_event: Optional[threading.Event] = None
+        self._inflight: Optional[tuple[dict, threading.Event]] = None
+
+    def _finish_inflight(self) -> None:
+        inflight, self._inflight = self._inflight, None
+        if inflight is not None:
+            inflight[1].set()
+
+    def _resident_model(self, target: dict):
+        with QMutexLocker(self._model_mutex):
+            if self._model is not None and self._current_settings == target:
+                return self._model
+        return None
 
     def load_model(
         self, model_name: str, precision: str, device: str, beam_size: int = 1
@@ -262,6 +274,12 @@ class ModelManager(QObject):
 
         if self._cancel_event:
             self._cancel_event.set()
+
+        self._finish_inflight()
+        self._inflight = (
+            {"model_name": model_name, "precision": precision, "device_type": device},
+            threading.Event(),
+        )
 
         new_version = str(uuid.uuid4())
         self._pending_version = new_version
@@ -293,13 +311,20 @@ class ModelManager(QObject):
         """Synchronous variant used by the server API when it needs the current
         model right now (blocks until a load finishes; typically the model is
         already resident in memory)."""
-        model, _ = self.get_model()
-        if model is not None and self._current_settings == {
-            "model_name": model_name,
-            "precision": precision,
-            "device_type": device,
-        }:
+        target = {"model_name": model_name, "precision": precision, "device_type": device}
+        model = self._resident_model(target)
+        if model is not None:
             return model
+
+        inflight = self._inflight
+        if inflight is not None and inflight[0] == target:
+            if not inflight[1].wait(timeout=600):
+                raise ModelLoadError(
+                    f"Timed out waiting for '{model_name}' ({precision}, {device}) to load"
+                )
+            model = self._resident_model(target)
+            if model is not None:
+                return model
 
         version = str(uuid.uuid4())
         cancel_event = threading.Event()
@@ -318,13 +343,14 @@ class ModelManager(QObject):
                     _release_model(self._model)
                 self._model = m
                 self._model_version = _v
-            self._current_settings = {
-                "model_name": name,
-                "precision": prec,
-                "device_type": dev,
-            }
+                self._current_settings = {
+                    "model_name": name,
+                    "precision": prec,
+                    "device_type": dev,
+                }
             holder["model"] = m
             done_event.set()
+            self.model_loaded.emit(name, prec, dev)
 
         def _on_error(err, _v):
             holder["error"] = err
@@ -334,9 +360,9 @@ class ModelManager(QObject):
             holder["error"] = "cancelled"
             done_event.set()
 
-        runnable.signals.model_loaded.connect(_on_loaded)
-        runnable.signals.error_occurred.connect(_on_error)
-        runnable.signals.download_cancelled.connect(_on_cancelled)
+        runnable.signals.model_loaded.connect(_on_loaded, Qt.DirectConnection)
+        runnable.signals.error_occurred.connect(_on_error, Qt.DirectConnection)
+        runnable.signals.download_cancelled.connect(_on_cancelled, Qt.DirectConnection)
         self._thread_pool.start(runnable)
 
         # Safety valve: a load should never block the server's queue worker
@@ -369,6 +395,7 @@ class ModelManager(QObject):
 
     def _on_download_cancelled(self, version: str) -> None:
         if version == self._pending_version:
+            self._finish_inflight()
             self.download_cancelled.emit()
 
     def _on_loading_started(self, model_name: str, version: str) -> None:
@@ -389,17 +416,19 @@ class ModelManager(QObject):
                 self._model = None
             self._model = model
             self._model_version = version
+            self._current_settings = {
+                "model_name": name,
+                "precision": precision,
+                "device_type": device,
+            }
 
-        self._current_settings = {
-            "model_name": name,
-            "precision": precision,
-            "device_type": device,
-        }
+        self._finish_inflight()
         logger.info(f"Model loaded successfully: {name}")
         self.model_loaded.emit(name, precision, device)
 
     def _on_model_error(self, error: str, version: str) -> None:
         if version == self._pending_version:
+            self._finish_inflight()
             logger.error(f"Model error: {error}")
             self.model_error.emit(error)
 
@@ -409,6 +438,7 @@ class ModelManager(QObject):
         _t = _time.perf_counter()
         if self._cancel_event:
             self._cancel_event.set()
+        self._finish_inflight()
         logger.info(f"[SHUTDOWN]   MM cancel_event.set(): {_time.perf_counter() - _t:.3f}s")
 
         _t = _time.perf_counter()
