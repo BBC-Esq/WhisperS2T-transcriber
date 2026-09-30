@@ -1152,12 +1152,12 @@ class MainWindow(QMainWindow):
         # multi-file modes; route to whichever cancellation path is live.
         if self.controller.is_batch_processing():
             self.controller.stop_batch_processing()
+            self.file_panel.mark_stopping("Stopping after the current file...")
         elif self.controller.is_transcribing():
             self.controller.cancel_transcription()
-            self.file_panel.on_single_file_done()
-        self.record_button.setText("Click to Record")
-        self.record_button.set_state(WaveformButton.IDLE)
-        self.record_button.setEnabled(True)
+            self.file_panel.mark_stopping("Cancelling...")
+        else:
+            self.file_panel.on_single_file_done(status="Stopped")
 
     @Slot(str)
     def _on_batch_finished(self, message: str) -> None:
