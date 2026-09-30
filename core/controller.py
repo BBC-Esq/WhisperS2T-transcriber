@@ -183,6 +183,10 @@ class TranscriberController(QObject):
     ) -> None:
         from core.transcription.batch_processor import BatchProcessor
 
+        if self.is_batch_processing():
+            logger.warning("Ignoring batch request while another batch is running")
+            return
+
         model, _ = self.model_manager.get_model()
         if not model:
             self.batch_error.emit("No model is loaded to process audio")

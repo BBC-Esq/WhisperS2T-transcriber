@@ -306,7 +306,7 @@ class FilePanelWindow(QWidget):
                 name = Path(path).name
                 self._path_label.setText(name)
                 self._path_label.setToolTip(path)
-                self._start_btn.setEnabled(True)
+                self._update_status()
                 self._status_label.setText("")
         else:
             d = QFileDialog.getExistingDirectory(self, "Select Directory to Scan")
