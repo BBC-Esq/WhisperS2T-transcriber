@@ -1164,6 +1164,13 @@ class MainWindow(QMainWindow):
 
     @Slot(list, str, str, int, str)
     def _on_batch_start(self, files, fmt, output_dir, batch_size, task_mode) -> None:
+        busy = self._busy_message()
+        if busy:
+            logger.info("Ignoring batch request; app is busy")
+            self.file_panel.on_single_file_done(status="Busy")
+            QMessageBox.information(self, "Busy", busy)
+            return
+
         self.record_button.setText("Transcribing...")
         self.record_button.set_state(WaveformButton.TRANSCRIBING)
         self.record_button.setEnabled(False)
