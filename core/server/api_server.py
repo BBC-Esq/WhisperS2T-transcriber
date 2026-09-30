@@ -308,6 +308,19 @@ def _build_settings(
     defaults = _state.default_settings
 
     model_key, model_info = _resolve_model_key(model_name, precision, defaults)
+    name = model_info["name"]
+
+    if task_mode and task_mode not in ("transcribe", "translate"):
+        raise ValueError(
+            f"Invalid task_mode '{task_mode}'. Use 'transcribe' or 'translate'."
+        )
+    can_translate = ModelMetadata.supports_translation(name)
+    if task_mode == "translate" and not can_translate:
+        raise ValueError(f"Model '{name}' does not support translation.")
+    resolved_task = (task_mode or defaults.task_mode) if can_translate else "transcribe"
+    resolved_language = (
+        "en" if ModelMetadata.is_english_only(name) else (language or defaults.language)
+    )
 
     settings = TranscriptionSettings(
         model_key=model_key,
@@ -322,8 +335,8 @@ def _build_settings(
             MIN_BATCH_SIZE,
             MAX_BATCH_SIZE,
         ),
-        language=language or defaults.language,
-        task_mode=task_mode or defaults.task_mode,
+        language=resolved_language,
+        task_mode=resolved_task,
         include_timestamps=(
             include_timestamps
             if include_timestamps is not None

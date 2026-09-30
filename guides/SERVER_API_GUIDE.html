@@ -682,7 +682,8 @@ srt_text <span class="op">=</span> <span class="fn">to_srt</span>(result[<span c
   <div class="tag">Important</div>
   <code>.en</code> models, all Distil variants and large-v3 turbo <strong>do not
   support translation</strong>. The server returns HTTP 400 if you request
-  <code>task_mode="translate"</code> against one of these models.
+  <code>task_mode="translate"</code> against one of these models. If you leave
+  <code>task_mode</code> out, these models simply transcribe.
 </div>
 </section>
 
@@ -1152,7 +1153,7 @@ with open("lecture.mp3", "rb") as f:
 | Whisper medium.en / small.en / base.en / tiny.en | Yes     | No          | English-only; forces language="en"           |
 | Distil Whisper large-v3.5 / large-v3 / medium.en / small.en | Varies | No | Distilled variants: faster, English-focused  |
 
-Important: .en models, all Distil variants and large-v3 turbo DO NOT support translation. The server returns HTTP 400 if you request task_mode="translate" against one.
+Important: .en models, all Distil variants and large-v3 turbo DO NOT support translation. The server returns HTTP 400 if you request task_mode="translate" against one. If you leave task_mode out, these models simply transcribe.
 
 ## 8. Checking Server Status
 
