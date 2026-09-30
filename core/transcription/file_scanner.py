@@ -15,7 +15,7 @@ class FileScanner:
                 files.extend(directory.rglob(pattern))
             else:
                 files.extend(directory.glob(pattern))
-        return sorted(files)
+        return sorted(p for p in files if p.is_file())
 
     def count_files(
         self, directory: Path, extensions: list[str], recursive: bool = False
