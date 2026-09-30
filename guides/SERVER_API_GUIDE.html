@@ -504,7 +504,7 @@ response <span class="op">=</span> requests.<span class="fn">post</span>(
     <tr><td><code>device</code></td><td>string</td><td>CPU or GPU</td><td><code>"cuda"</code>, <code>"cpu"</code></td></tr>
     <tr><td><code>language</code></td><td>string</td><td>ISO 639-1 language code. <code>.en</code>-suffixed models only speak English.</td><td><code>"en"</code>, <code>"fr"</code>, <code>"es"</code>, <code>"de"</code>, <code>"zh"</code>, &hellip; (99 languages)</td></tr>
     <tr><td><code>task_mode</code></td><td>string</td><td>Transcribe in source language, or translate to English.</td><td><code>"transcribe"</code>, <code>"translate"</code></td></tr>
-    <tr><td><code>beam_size</code></td><td>integer</td><td>Number of beams for decoding. Higher = more accurate, slower. <strong>Model reload required</strong> &mdash; this is baked into the loaded model.</td><td><code>1</code>&ndash;<code>5</code> (default <code>1</code>)</td></tr>
+    <tr><td><code>beam_size</code></td><td>integer</td><td>Number of beams for decoding. Higher = more accurate, slower. Applies to that request only; no model reload.</td><td><code>1</code>&ndash;<code>5</code> (default <code>1</code>)</td></tr>
     <tr><td><code>batch_size</code></td><td>integer</td><td>Chunk batch size for VAD processing. Not a file-count.</td><td><code>1</code>&ndash;<code>200</code> (default <code>16</code>)</td></tr>
     <tr><td><code>include_timestamps</code></td><td>boolean</td><td>Return segment start/end times in the <code>segments</code> array. When false, <code>segments</code> is <code>[]</code>.</td><td><code>"true"</code>, <code>"false"</code></td></tr>
     <tr><td><code>audio_format</code></td><td>string</td><td>Override input format auto-detection</td><td><code>"auto"</code>, <code>"file"</code>, <code>"numpy"</code>, <code>"tensor"</code>, <code>"pcm"</code></td></tr>
@@ -546,12 +546,9 @@ result <span class="op">=</span> response.<span class="fn">json</span>()
 <span class="fn">print</span>(result[<span class="str">"text"</span>])
 <span class="fn">print</span>(<span class="str">f"Took </span>{result[<span class="str">'processing_time_seconds'</span>]}<span class="str"> seconds"</span>)</code></pre>
 
-<div class="callout warn">
-  <div class="tag">Important</div>
-  <strong>beam_size</strong> is applied at model load time (via
-  <code>asr_options</code>). Changing it triggers a full model reload, so
-  don't change it on a per-request basis in tight loops &mdash; set it once
-  in the GUI before turning the server on.
+<div class="callout info">
+  <div class="tag">Note</div>
+  <strong>beam_size</strong> applies only to the request that sends it and never reloads the model. When omitted, the Beam Size set in the GUI is used.
 </div>
 </section>
 
@@ -1069,7 +1066,7 @@ Every setting is optional. If omitted, the server uses the GUI-configured value.
 | device             | string  | CPU or GPU                                            | "cuda", "cpu"                                             |
 | language           | string  | ISO 639-1 language code                               | "en", "fr", "es", "de", "zh", ... (99 languages)          |
 | task_mode          | string  | Transcribe in source language or translate to English | "transcribe", "translate"                                 |
-| beam_size          | int     | Decoding beam width. Model reload required.           | 1-5 (default 1)                                           |
+| beam_size          | int     | Decoding beam width, applied per request.             | 1-5 (default 1)                                           |
 | batch_size         | int     | Chunk batch size for VAD                              | 1-200 (default 16)                                        |
 | include_timestamps | bool    | Return segment times                                  | "true", "false"                                           |
 | audio_format       | string  | Override input format auto-detection                  | "auto", "file", "numpy", "tensor", "pcm"                  |
@@ -1078,7 +1075,7 @@ Every setting is optional. If omitted, the server uses the GUI-configured value.
 
 Note: WhisperS2T's VAD is always on. No vad_filter, condition_on_previous_text, word_timestamps, or temperature fields exist in this backend.
 
-Important: beam_size is applied at model load time. Changing it triggers a full model reload.
+Note: beam_size applies only to the request that sends it and never reloads the model. When omitted, the Beam Size set in the GUI is used.
 
 Note: There is no output_format parameter. The API always returns JSON; the txt/srt/vtt/json choice in the GUI applies only to files written during local transcription. For subtitles, pass include_timestamps=true and convert the segments array yourself (see section 6e for a ready-made SRT converter).
 

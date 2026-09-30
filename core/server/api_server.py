@@ -196,7 +196,7 @@ def _do_transcription(item: WorkItem) -> Dict[str, Any]:
             model_name=model_name,
             precision=precision,
             device=item.settings.device,
-            beam_size=item.settings.beam_size,
+            beam_size=_state.default_settings.beam_size,
         )
     except Exception as e:
         raise RuntimeError(f"Failed to load model: {e}") from e
@@ -204,13 +204,18 @@ def _do_transcription(item: WorkItem) -> Dict[str, Any]:
     if model is None:
         raise RuntimeError("Failed to load model")
 
-    out = model.transcribe_with_vad(
-        [str(item.audio_path)],
-        lang_codes=[item.settings.language],
-        tasks=[item.settings.task_mode],
-        initial_prompts=[None],
-        batch_size=item.settings.batch_size,
-    )
+    loaded_beam_size = model.generate_kwargs["beam_size"]
+    model.update_generation_kwargs({"beam_size": item.settings.beam_size})
+    try:
+        out = model.transcribe_with_vad(
+            [str(item.audio_path)],
+            lang_codes=[item.settings.language],
+            tasks=[item.settings.task_mode],
+            initial_prompts=[None],
+            batch_size=item.settings.batch_size,
+        )
+    finally:
+        model.update_generation_kwargs({"beam_size": loaded_beam_size})
 
     raw_segments = out[0] if out else []
     text_parts = [s.get("text", "").lstrip() for s in raw_segments if s.get("text")]
