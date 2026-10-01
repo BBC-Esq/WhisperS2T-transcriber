@@ -12,11 +12,10 @@ from core.logging_config import get_logger
 from core.models.loader import (
     check_model_cached,
     download_model_files,
-    get_missing_files,
     get_repo_file_info,
     get_repo_id,
     load_whisper_s2t_model,
-    validate_model_path,
+    prepare_model_download,
 )
 
 logger = get_logger(__name__)
@@ -126,48 +125,16 @@ class _ModelLoaderRunnable(QRunnable):
                 )
 
     def _resolve_model_files(self, repo_id: str) -> Optional[str]:
-        cached_path = check_model_cached(repo_id)
-
-        if cached_path:
-            files_info = None
-            try:
-                files_info = get_repo_file_info(repo_id)
-            except Exception as e:
-                if _is_network_error(e):
-                    if validate_model_path(cached_path):
-                        logger.info(
-                            f"Offline but found cached model for "
-                            f"'{self.model_name}', using cache as-is"
-                        )
-                        return cached_path
-                    self.signals.error_occurred.emit(
-                        f"Cached model '{self.model_name}' appears corrupted "
-                        f"and cannot be verified offline. Please connect to "
-                        f"the internet to re-download, or delete the cached "
-                        f"model and try again.",
-                        self.model_version,
-                    )
-                    return None
-                self.signals.error_occurred.emit(
-                    f"Failed to get model info for '{self.model_name}': {e}",
-                    self.model_version,
-                )
-                return None
-
-            if self.cancel_event.is_set():
-                self.signals.download_cancelled.emit(self.model_version)
-                return None
-
-            _, missing_files = get_missing_files(repo_id, files_info, cached_path)
-
-            if not missing_files:
-                return cached_path
-
-            return self._download_files(repo_id, missing_files)
-
         try:
-            files_info = get_repo_file_info(repo_id)
+            revision, files_info = get_repo_file_info(repo_id)
         except Exception as e:
+            cached_path = check_model_cached(repo_id)
+            if cached_path:
+                logger.info(
+                    f"Could not check '{self.model_name}' online ({e}); "
+                    f"using the cached copy"
+                )
+                return cached_path
             if _is_network_error(e):
                 self.signals.error_occurred.emit(
                     f"Cannot download model '{self.model_name}': "
@@ -186,26 +153,35 @@ class _ModelLoaderRunnable(QRunnable):
             self.signals.download_cancelled.emit(self.model_version)
             return None
 
-        _, missing_files = get_missing_files(repo_id, files_info, cached_path)
+        ready_path, files_to_download, local_dir = prepare_model_download(
+            repo_id, revision, files_info
+        )
+        if ready_path:
+            return ready_path
 
-        if not missing_files:
-            return check_model_cached(repo_id)
-
-        return self._download_files(repo_id, missing_files)
+        return self._download_files(repo_id, revision, files_to_download, local_dir)
 
     def _download_files(
-        self, repo_id: str, files_to_download: list[tuple[str, int]]
+        self,
+        repo_id: str,
+        revision: str,
+        files_to_download: list[tuple[str, int]],
+        local_dir=None,
     ) -> Optional[str]:
         total_bytes = sum(size for _, size in files_to_download)
-        self.signals.download_started.emit(
-            self.model_name, total_bytes, self.model_version
-        )
+        show_progress = total_bytes > 0
+        if show_progress:
+            self.signals.download_started.emit(
+                self.model_name, total_bytes, self.model_version
+            )
 
         try:
             local_path = download_model_files(
                 repo_id,
+                revision,
                 files_to_download,
-                progress_callback=self._on_download_progress,
+                local_dir=local_dir,
+                progress_callback=self._on_download_progress if show_progress else None,
                 cancel_event=self.cancel_event,
             )
         except InterruptedError:
@@ -226,7 +202,8 @@ class _ModelLoaderRunnable(QRunnable):
                 )
             return None
 
-        self.signals.download_finished.emit(self.model_name, self.model_version)
+        if show_progress:
+            self.signals.download_finished.emit(self.model_name, self.model_version)
         return local_path
 
     def _on_download_progress(self, downloaded: int, total: int) -> None:

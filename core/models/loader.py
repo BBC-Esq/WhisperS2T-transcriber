@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import sys
 import threading
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, NamedTuple, Optional
 
 import whisper_s2t
 from huggingface_hub import HfApi, hf_hub_download, snapshot_download
@@ -85,13 +86,31 @@ def get_repo_id(model_name: str, precision: str) -> str:
     return info["repo_id"]
 
 
-def _get_local_model_dir(repo_id: str) -> Path:
+_REQUIRED_FILES = ("model.bin", "config.json", "tokenizer.json")
+_VOCABULARY_FILES = ("vocabulary.json", "vocabulary.txt")
+
+
+class RepoFile(NamedTuple):
+    name: str
+    size: int
+    blob_id: str
+    sha256: Optional[str]
+
+
+def _hub_cache_dir() -> Path:
     try:
         from huggingface_hub.constants import HF_HUB_CACHE
-        base = Path(HF_HUB_CACHE)
+        return Path(HF_HUB_CACHE)
     except Exception:
-        base = Path.home() / ".cache" / "huggingface" / "hub"
-    return base / "local_copies" / repo_id.replace("/", "--")
+        return Path.home() / ".cache" / "huggingface" / "hub"
+
+
+def _repo_cache_dir(repo_id: str) -> Path:
+    return _hub_cache_dir() / ("models--" + repo_id.replace("/", "--"))
+
+
+def _get_local_model_dir(repo_id: str) -> Path:
+    return _hub_cache_dir() / "local_copies" / repo_id.replace("/", "--")
 
 
 def _is_file_accessible(filepath: Path) -> bool:
@@ -104,84 +123,106 @@ def _is_file_accessible(filepath: Path) -> bool:
 
 
 def validate_model_path(path: str) -> bool:
-    model_bin = Path(path) / "model.bin"
-    return _is_file_accessible(model_bin)
-
-
-def _resolve_cache_path(repo_id: str) -> Optional[str]:
-    try:
-        from huggingface_hub import scan_cache_dir
-        cache_info = scan_cache_dir()
-        for repo in cache_info.repos:
-            if repo.repo_id == repo_id:
-                for revision in repo.revisions:
-                    return str(revision.snapshot_path)
-    except Exception:
-        pass
-    return None
+    root = Path(path)
+    return all(_is_file_accessible(root / name) for name in _REQUIRED_FILES) and any(
+        _is_file_accessible(root / name) for name in _VOCABULARY_FILES
+    )
 
 
 def check_model_cached(repo_id: str) -> Optional[str]:
-    normal_path = None
-    try:
-        normal_path = snapshot_download(repo_id, local_files_only=True)
-    except OSError as e:
-        logger.debug(
-            f"Cache check hit OS error for {repo_id}: {e}. "
-            f"Attempting manual cache path resolution."
-        )
-        normal_path = _resolve_cache_path(repo_id)
-    except Exception:
-        pass
-
-    if normal_path and validate_model_path(normal_path):
-        return normal_path
-
+    snapshots = _repo_cache_dir(repo_id) / "snapshots"
+    candidates = list(snapshots.iterdir()) if snapshots.is_dir() else []
     local_dir = _get_local_model_dir(repo_id)
-    if local_dir.is_dir() and validate_model_path(str(local_dir)):
-        return str(local_dir)
-
-    if normal_path:
-        return normal_path
-
+    if local_dir.is_dir():
+        candidates.append(local_dir)
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    for candidate in candidates:
+        if validate_model_path(str(candidate)):
+            return str(candidate)
     return None
 
 
-def get_repo_file_info(repo_id: str) -> list[tuple[str, int]]:
-    api = HfApi()
-    info = api.repo_info(repo_id, repo_type="model", files_metadata=True)
-    files = []
-    for sibling in info.siblings:
-        size = sibling.size if sibling.size is not None else 0
-        files.append((sibling.rfilename, size))
-    files.sort(key=lambda x: x[1])
-    return files
+def get_repo_file_info(repo_id: str) -> tuple[str, list[RepoFile]]:
+    info = HfApi().repo_info(repo_id, repo_type="model", files_metadata=True)
+    files = [
+        RepoFile(
+            name=sibling.rfilename,
+            size=sibling.size or 0,
+            blob_id=sibling.blob_id,
+            sha256=sibling.lfs.sha256 if sibling.lfs else None,
+        )
+        for sibling in info.siblings
+    ]
+    files.sort(key=lambda f: f.size)
+    return info.sha, files
 
 
-def get_missing_files(
-    repo_id: str,
-    files_info: list[tuple[str, int]],
-    cached_path: Optional[str] = None,
-) -> tuple[Optional[str], list[tuple[str, int]]]:
-    if cached_path is None:
+def _file_matches(path: Path, repo_file: RepoFile, exact: bool = True) -> bool:
+    try:
+        if not path.is_file() or path.stat().st_size != repo_file.size:
+            return False
+        if repo_file.sha256 and not exact:
+            return True
+        if repo_file.sha256:
+            digest, expected = hashlib.sha256(), repo_file.sha256
+        else:
+            digest = hashlib.sha1(b"blob %d\0" % repo_file.size)
+            expected = repo_file.blob_id
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return False
+    return digest.hexdigest() == expected
+
+
+def _reuse_identical_file(repo_id: str, revision: str, repo_file: RepoFile) -> bool:
+    snapshots = _repo_cache_dir(repo_id) / "snapshots"
+    if not snapshots.is_dir():
+        return False
+    target = snapshots / revision / repo_file.name
+    for other in snapshots.iterdir():
+        source = other / repo_file.name
+        if other.name == revision or not _file_matches(source, repo_file):
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
         try:
-            cached_path = snapshot_download(repo_id, local_files_only=True)
+            os.link(source.resolve(), target)
         except OSError:
-            cached_path = _resolve_cache_path(repo_id)
-            if cached_path is None:
-                return None, list(files_info)
-        except Exception:
-            return None, list(files_info)
+            shutil.copyfile(source, target)
+        return True
+    return False
 
-    missing = []
-    for filename, size in files_info:
-        filepath = Path(cached_path) / filename
-        if not _is_file_accessible(filepath):
-            missing.append((filename, size))
 
-    if missing:
-        return None, missing
-    return cached_path, []
+def prepare_model_download(
+    repo_id: str, revision: str, files: list[RepoFile]
+) -> tuple[Optional[str], list[tuple[str, int]], Optional[Path]]:
+    snapshot = _repo_cache_dir(repo_id) / "snapshots" / revision
+    if all(_is_file_accessible(snapshot / f.name) for f in files) and validate_model_path(
+        str(snapshot)
+    ):
+        return str(snapshot), [], None
+
+    local_dir = _get_local_model_dir(repo_id)
+    if validate_model_path(str(local_dir)):
+        return None, [
+            (f.name, 0 if _file_matches(local_dir / f.name, f, exact=False) else f.size)
+            for f in files
+        ], local_dir
+
+    blobs = _repo_cache_dir(repo_id) / "blobs"
+    to_download = []
+    for f in files:
+        if _is_file_accessible(snapshot / f.name):
+            continue
+        if (blobs / (f.sha256 or f.blob_id)).is_file():
+            to_download.append((f.name, 0))
+        elif not _reuse_identical_file(repo_id, revision, f):
+            to_download.append((f.name, f.size))
+
+    if not to_download and validate_model_path(str(snapshot)):
+        return str(snapshot), [], None
+    return None, to_download, None
 
 
 def _on_rmtree_error(func, path, _exc_info):
@@ -257,7 +298,9 @@ def _clear_corrupted_cache(repo_id: str) -> None:
 
 def download_model_files(
     repo_id: str,
+    revision: str,
     files_info: list[tuple[str, int]],
+    local_dir: Optional[Path] = None,
     progress_callback: Optional[Callable[[int, int], None]] = None,
     cancel_event: Optional[threading.Event] = None,
 ) -> str:
@@ -278,7 +321,9 @@ def download_model_files(
                 if (progress_callback or cancel_event is not None)
                 else None
             )
-            dl_kwargs = {"repo_id": repo_id, "filename": filename}
+            dl_kwargs = {"repo_id": repo_id, "filename": filename, "revision": revision}
+            if local_dir is not None:
+                dl_kwargs["local_dir"] = str(local_dir)
             if tqdm_cls:
                 dl_kwargs["tqdm_class"] = tqdm_cls
             hf_hub_download(**dl_kwargs)
@@ -296,7 +341,11 @@ def download_model_files(
             )
             _ensure_streams()
             try:
-                local_path = snapshot_download(repo_id)
+                local_path = snapshot_download(
+                    repo_id,
+                    revision=revision,
+                    local_dir=str(local_dir) if local_dir is not None else None,
+                )
             except Exception as snap_err:
                 raise snap_err from file_err
             if progress_callback:
@@ -308,14 +357,10 @@ def download_model_files(
         if progress_callback:
             progress_callback(downloaded_bytes, total_bytes)
 
-    try:
-        local_path = snapshot_download(repo_id, local_files_only=True)
-    except OSError:
-        local_path = _resolve_cache_path(repo_id)
-        if local_path is None:
-            raise ModelLoadError(
-                f"Files downloaded but cache path could not be resolved for {repo_id}"
-            )
+    if local_dir is not None:
+        local_path = str(local_dir)
+    else:
+        local_path = str(_repo_cache_dir(repo_id) / "snapshots" / revision)
 
     if validate_model_path(local_path):
         return local_path
