@@ -41,7 +41,7 @@ libs = [
     "sympy==1.13.3",
     "tqdm",
     "uvicorn",
-    "whisper-s2t-reborn>=1.7.1,<2.0.0",
+    "whisper-s2t-reborn>=1.8.0,<2.0.0",
 ]
 
 
