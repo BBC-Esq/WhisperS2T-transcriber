@@ -90,6 +90,7 @@ class BatchProcessor(QThread):
         timer.start()
 
         seen_paths: set[str] = set()
+        no_speech = 0
 
         try:
             total_files = len(self.files)
@@ -115,6 +116,12 @@ class BatchProcessor(QThread):
                     raw_segments = out[0] if out else []
                     segments = _segments_from_whisper_s2t(raw_segments)
                     text = "\n".join(seg.text.lstrip() for seg in segments if seg.text)
+
+                    if not text.strip():
+                        no_speech += 1
+                        logger.info("No speech found in %s; no output written", audio_file.name)
+                        self.progress.emit(idx, total_files, f"No speech in {audio_file.name}")
+                        continue
 
                     duration = segments[-1].end if segments else None
                     result = TranscriptionResult(
@@ -157,4 +164,7 @@ class BatchProcessor(QThread):
 
         finally:
             elapsed = timer.elapsed() / 1000.0
-            self.finished.emit(f"Processing time: {elapsed:.2f} seconds")
+            message = f"Processing time: {elapsed:.2f} seconds"
+            if no_speech:
+                message += f" (no speech in {no_speech} file{'' if no_speech == 1 else 's'})"
+            self.finished.emit(message)
