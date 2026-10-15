@@ -305,7 +305,9 @@ class TranscriberController(QObject):
     @Slot(str)
     def _on_transcription_completed(self, text: str) -> None:
         self.text_ready_signal.emit(text)
-        self.update_button_signal.emit("Click to Record")
+        self.update_button_signal.emit(
+            "Click to Record" if text.strip() else "No Speech Detected---Click to Record"
+        )
         self.enable_widgets_signal.emit(True)
 
     @Slot(object)

@@ -1135,8 +1135,8 @@ class MainWindow(QMainWindow):
         if output_mode == "clipboard":
             return
 
-        if not result.segments:
-            logger.warning("No segments available for file output")
+        if not result.text.strip():
+            logger.info("No speech found; no output file written")
             return
 
         source_path = Path(source_file) if source_file else result.source_file
@@ -1283,6 +1283,15 @@ class MainWindow(QMainWindow):
     def _on_transcription_ready(self, text: str) -> None:
         self.record_button.set_state(WaveformButton.IDLE)
 
+        if self.is_recording:
+            self.is_recording = False
+            update_button_property(self.record_button, "recording", False)
+
+        if not text.strip():
+            logger.info("Transcription found no speech; clipboard left unchanged")
+            self._finish_panel_job("No speech detected")
+            return
+
         output_mode = getattr(self, "_pending_output_mode", "clipboard")
 
         if output_mode in ("clipboard", "save_and_clipboard"):
@@ -1295,10 +1304,6 @@ class MainWindow(QMainWindow):
                     else text
                 )
                 app.clipboard().setText(clip_text)
-
-        if self.is_recording:
-            self.is_recording = False
-            update_button_property(self.record_button, "recording", False)
 
         self._finish_panel_job("Done")
 
