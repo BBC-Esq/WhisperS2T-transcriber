@@ -615,6 +615,11 @@ result <span class="op">=</span> response.<span class="fn">json</span>()
   </tbody>
 </table>
 
+<div class="callout info">
+  <div class="tag">Note</div>
+  Audio with no speech (silence, background noise, or an empty file) still returns HTTP <code>200</code>, with <code>text</code> set to <code>""</code> and <code>segments</code> set to <code>[]</code>. Check for an empty <code>text</code> instead of waiting for an error.
+</div>
+
 <h3>6d. How to Access Each Field in Python</h3>
 
 <pre><code><span class="kw">import</span> requests
@@ -1133,6 +1138,8 @@ with open("lecture.mp3", "rb") as f:
 | task                    | string | Yes    | "transcribe" or "translate"                           |
 | model_used              | string | Yes    | Full model key, e.g. "Whisper large-v3 - float16"   |
 | processing_time_seconds | float  | Yes    | How long the transcription took                       |
+
+Note: Audio with no speech (silence, background noise, or an empty file) still returns HTTP 200, with text set to "" and segments set to []. Check for an empty text instead of waiting for an error.
 
 ## 7. Model Notes
 
