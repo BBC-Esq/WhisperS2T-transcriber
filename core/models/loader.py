@@ -416,9 +416,6 @@ def load_whisper_s2t_model(
         "cpu_threads": cpu_threads,
     }
 
-    if "large-v3" in info["repo_id"]:
-        kwargs["n_mels"] = 128
-
     logger.info(
         f"Loading WhisperS2T model: name={model_name}, precision={precision}, "
         f"device={device}, beam_size={beam_size}"
