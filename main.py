@@ -44,6 +44,7 @@ _cuda_paths_configured = setup_cuda_if_available()
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
+from config.migration import migrate_legacy_settings
 from core.logging_config import setup_logging, get_logger
 from core.temp_file_manager import temp_file_manager
 from gui.main_window import MainWindow
@@ -91,6 +92,11 @@ def run_gui() -> None:
     logger.info("Application starting")
     logger.info(f"Log file: {log_file}")
     logger.info(f"CUDA paths configured: {_cuda_paths_configured}")
+
+    try:
+        migrate_legacy_settings()
+    except Exception as e:
+        logger.warning(f"Could not migrate settings from the previous location: {e}")
 
     sys.excepthook = _global_exception_handler
 
