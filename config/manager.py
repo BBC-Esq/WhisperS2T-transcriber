@@ -8,7 +8,7 @@ import yaml
 
 from core.exceptions import ConfigurationError
 from core.logging_config import get_logger
-from utils import get_resource_path
+from utils import get_settings_dir
 
 logger = get_logger(__name__)
 
@@ -57,7 +57,7 @@ class ConfigManager:
     }
 
     def __init__(self):
-        self._config_path = Path(get_resource_path("config.yaml"))
+        self._config_path = get_settings_dir() / "config.yaml"
         self._config_cache: dict[str, Any] | None = None
         self._dirty = False
         self._flush_timer = None

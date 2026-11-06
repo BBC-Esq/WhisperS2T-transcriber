@@ -47,6 +47,7 @@ from gui.file_panel import FilePanelWindow
 from gui.settings_dialog import SettingsDialog
 from gui.styles import update_button_property
 from gui.visualizations import WaveformButton
+from utils import get_settings_dir
 
 logger = get_logger(__name__)
 
@@ -182,7 +183,9 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("WhisperS2T Transcriber")
 
-        self.settings = QSettings("WhisperS2TTranscriber", "Transcriber")
+        self.settings = QSettings(
+            str(get_settings_dir() / "Transcriber.ini"), QSettings.IniFormat
+        )
 
         self.loaded_model_settings = config_manager.get_model_settings()
         self.task_mode = config_manager.get_value("task_mode", "transcribe")

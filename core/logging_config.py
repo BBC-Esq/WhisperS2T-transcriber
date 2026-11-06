@@ -6,16 +6,14 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from utils import get_local_data_dir
+
 _LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def get_log_directory() -> Path:
-    if getattr(sys, 'frozen', False):
-        log_dir = Path(sys.executable).parent / "logs"
-    else:
-        log_dir = Path.cwd() / "logs"
-
+    log_dir = get_local_data_dir() / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
 

@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import os
-import sys
+from pathlib import Path
 
 import psutil
 
+APP_FOLDER_NAME = "WhisperS2TTranscriber"
 
-def get_resource_path(relative_path: str) -> str:
-    """Resolve a path relative to the application root, whether frozen or not."""
-    if getattr(sys, 'frozen', False):
-        base_path = os.path.dirname(sys.executable)
-    else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
 
-    return os.path.join(base_path, relative_path)
+def get_settings_dir() -> Path:
+    base = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
+    return Path(base) / APP_FOLDER_NAME
+
+
+def get_local_data_dir() -> Path:
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+    return Path(base) / APP_FOLDER_NAME
 
 
 def get_logical_core_count() -> int:
